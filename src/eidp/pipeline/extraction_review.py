@@ -49,6 +49,8 @@ REVIEW_REPORT_COLUMNS: tuple[str, ...] = (
     "school_id",
     "fiscal_year",
     "department_name",
+    "field_category",
+    "course_name",
     "metric",
     "extracted_value",
     "corrected_value",
@@ -80,6 +82,8 @@ class ExtractionReviewRecord:
     source_page_url: str
     source_pdf: str | None
     department_name: str | None
+    field_category: str | None
+    course_name: str | None
     metric: str | None
     extracted_value: int | None
     corrected_value: int | None
@@ -259,6 +263,8 @@ def _review_record_from_extracted_row(
         source_page_url=row.source_page_url,
         source_pdf=row.pdf_path,
         department_name=row.department_name,
+        field_category=row.field_category,
+        course_name=row.course_name,
         metric=row.metric,
         extracted_value=row.value,
         corrected_value=None,
@@ -292,6 +298,8 @@ def _review_record_from_exception_item(item: ExtractionQueueItem) -> ExtractionR
         source_page_url=item.source_page_url,
         source_pdf=item.pdf_path,
         department_name=None,
+        field_category=None,
+        course_name=None,
         metric=None,
         extracted_value=None,
         corrected_value=None,
@@ -385,6 +393,8 @@ def _review_report_row(record: ExtractionReviewRecord) -> dict[str, object]:
         "school_id": record.school_id or "",
         "fiscal_year": record.fiscal_year,
         "department_name": record.department_name or "",
+        "field_category": record.field_category or "",
+        "course_name": record.course_name or "",
         "metric": record.metric or "",
         "extracted_value": record.extracted_value if record.extracted_value is not None else "",
         "corrected_value": record.corrected_value if record.corrected_value is not None else "",
@@ -416,6 +426,8 @@ def _review_record_to_dict(record: ExtractionReviewRecord) -> dict[str, object]:
         "source_page_url": record.source_page_url,
         "source_pdf": record.source_pdf,
         "department_name": record.department_name,
+        "field_category": record.field_category,
+        "course_name": record.course_name,
         "metric": record.metric,
         "extracted_value": record.extracted_value,
         "corrected_value": record.corrected_value,
@@ -449,6 +461,8 @@ def _review_record_from_mapping(payload: dict[str, object]) -> ExtractionReviewR
         source_page_url=_required_str(payload, "source_page_url"),
         source_pdf=_optional_str(payload.get("source_pdf")),
         department_name=_optional_str(payload.get("department_name")),
+        field_category=_optional_str(payload.get("field_category")),
+        course_name=_optional_str(payload.get("course_name")),
         metric=_optional_str(payload.get("metric")),
         extracted_value=_optional_int(payload.get("extracted_value")),
         corrected_value=_optional_int(payload.get("corrected_value")),

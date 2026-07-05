@@ -168,6 +168,8 @@ def test_review_report_includes_evidence_columns(tmp_path: Path) -> None:
 
     assert capacity["school_name"] == "東京テスト専門学校"
     assert capacity["department_name"] == "テスト学科"
+    assert capacity["field_category"] == "文化教養"
+    assert capacity["course_name"] == "専門課程"
     assert capacity["extracted_value"] == "40"
     assert capacity["corrected_value"] == "42"
     assert capacity["review_status"] == "corrected"

@@ -36,6 +36,8 @@ NORMALIZED_REVIEW_REPORT_COLUMNS: tuple[str, ...] = (
     "school_id",
     "fiscal_year",
     "department_name",
+    "field_category",
+    "course_name",
     "metric",
     "original_value",
     "corrected_value",
@@ -65,6 +67,8 @@ class ReviewedExtractionRow:
     school_id: str | None
     fiscal_year: int
     department_name: str | None
+    field_category: str | None
+    course_name: str | None
     metric: str | None
     original_value: int | None
     corrected_value: int | None
@@ -110,6 +114,8 @@ def reviewed_rows_from_records(records: list[ExtractionReviewRecord]) -> list[Re
             school_id=record.school_id,
             fiscal_year=record.fiscal_year,
             department_name=record.department_name,
+            field_category=record.field_category,
+            course_name=record.course_name,
             metric=record.metric,
             original_value=record.extracted_value,
             corrected_value=record.corrected_value,
@@ -162,6 +168,8 @@ def _report_row(row: ReviewedExtractionRow) -> dict[str, object]:
         "school_id": row.school_id or "",
         "fiscal_year": row.fiscal_year,
         "department_name": row.department_name or "",
+        "field_category": row.field_category or "",
+        "course_name": row.course_name or "",
         "metric": row.metric or "",
         "original_value": row.original_value if row.original_value is not None else "",
         "corrected_value": row.corrected_value if row.corrected_value is not None else "",
