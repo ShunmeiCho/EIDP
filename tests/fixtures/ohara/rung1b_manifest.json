@@ -1,0 +1,105 @@
+{
+  "manifest_version": 1,
+  "corporation_name": "大原学園",
+  "fiscal_year": 2025,
+  "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+  "notes": "Rung 1b pins. URL authoritative for year + file selection; PDF body corroborates identity only; master.xlsx is EXPECTED-OUTPUT, never a source of PDF identity. 3 risk-typed schools (03 obvious / 08 sibling+taxonomy / 16 label-variation) are the hard gate; 06 is 08's sibling pair-mate carried for the pin-discrimination proof and a documented master data-quality finding.",
+  "schools": [
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原医療福祉専門学校",
+      "school_name": "大原医療福祉専門学校",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-03-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-03-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index listing the 確認申請書 PDFs"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-03-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原医療福祉専門学校", "note": "read from the 確認申請書 学校名 header; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["obvious_match"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原医療福祉専門学校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 03. Distinctive name, no sibling collision. Hard gate expected to pass; 2 capacity cross-source deltas reconcile."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原ビジネス公務員専門学校山形校",
+      "school_name": "大原ビジネス公務員専門学校山形校",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-08-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-08-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-08-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原ビジネス公務員専門学校山形校", "note": "学校名 header disambiguates 山形校 from sibling 盛岡校 (code 06); identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["sibling_school_risk", "field_label_variation"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原ビジネス公務員専門学校山形校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 08. Sibling of 盛岡校 (06); pin binds 山形校 only. Exercises コース-suffix normalization and 分野 taxonomy alignment (公務員学科 filed 文化教養 in master vs 商業実務 in PDF). Hard gate expected to pass with 2 taxonomy + 1 capacity reconciliations."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "東京アニメーター学院専門学校",
+      "school_name": "東京アニメーター学院専門学校",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-16-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-16-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-16-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "東京アニメーター学院専門学校", "note": "学校名 header; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["field_label_variation"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "東京アニメーター学院専門学校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 16. 分野 文化教養 (no 中点) exercises the 中点-fold; non-zero intl (2/1/1). master carries 2 legacy depts with blank FY2025 在籍 (漫画家プロ養成 / イラストレーション) that the loader now skips. Hard gate expected to pass, 3/3 diff=0."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原ビジネス公務員専門学校盛岡校",
+      "school_name": "大原ビジネス公務員専門学校盛岡校",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-06-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-06-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-06-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原ビジネス公務員専門学校盛岡校", "note": "学校名 header disambiguates 盛岡校 from sibling 山形校 (code 08)"}
+        ]
+      },
+      "risk_flags": ["sibling_school_risk"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原ビジネス公務員専門学校盛岡校", "fiscal_year": 2025},
+      "status": "pinned_master_finding",
+      "notes": "code 06. Sibling pair-mate of 08; pin binds 盛岡校 (11/12 exact proves no cross-match with 山形校). NOT a Rung-1b gated pass: 公務員2年制 在籍 master=91 vs official PDF raw='92人' (Δ+1) is a master_expected_error (extractor proven correct; master red-line, not editable here) -> owner master-correction item. Carried for the pin-discrimination proof and the finding, not counted in the 3-school gate."
+    }
+  ]
+}
