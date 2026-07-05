@@ -17,6 +17,7 @@ Release Forecast: `NOT_READY`
 - Goal 3B: extraction review UI MVP with evidence display, review actions, correction log, and review report generation.
 - Goal 3C: normalized review report, read-only master expected subset loading, reviewed-row diff, mismatch CSV, and lightweight Web diff page.
 - Goal 3D: reviewed-row key hardening, `field_category` / `course_name` preservation, master row identity, and `ambiguous_key` reporting.
+- Goal 3E: multi-user architecture boundary for React/FastAPI/PostgreSQL migration planning.
 
 ## Current Chain
 
@@ -27,6 +28,7 @@ PDF intake
 -> normalized review report
 -> master expected subset diff
 -> ambiguous-key gated mismatch report
+-> multi-user architecture boundary
 
 ## Verification
 
@@ -60,6 +62,8 @@ PDF intake
 - Windows canary evidence changes.
 - Owner/PI final sign-off for data handling and network access boundaries.
 - Operator mapping UI or workflow for resolving remaining `ambiguous_key` rows.
+- React/FastAPI/PostgreSQL implementation.
+- Authentication, roles, locking implementation, and job queue implementation.
 
 ## Key-Collision Audit
 
@@ -74,8 +78,23 @@ Result:
 - Goal 3D now reports ambiguous keys instead of silently matching them.
 - Goal 4 may only compare rows that resolve to a unique reviewed/external key; `ambiguous_key`, `needs_review`, and `excluded` rows remain not comparable and must not become Excel-ready.
 
+## Multi-User Architecture Boundary
+
+- `docs/decisions/ADR-2026-07-multi-user-web-architecture.md`
+- `docs/release/linux-web-multi-user-gates.md`
+- `docs/roadmap/react-fastapi-postgres-migration.md`
+
+Decision summary:
+
+- Python remains the backend, extraction, Excel, audit, and job-processing core.
+- Streamlit remains MVP/internal prototype UI.
+- React is the target formal multi-user UI.
+- FastAPI is the target backend API layer.
+- PostgreSQL is the target multi-user persistence layer.
+- Goal 4 may proceed only on unique comparable rows; `ambiguous_key`, `needs_review`, and `excluded` remain not comparable.
+
 ## Release Forecast
 
 `NOT_READY`
 
-This integration line is suitable as the base for Goal 4 only if the next slice treats `ambiguous_key` rows as not comparable. It is not suitable for release or RC designation.
+This integration line is suitable as the base for Goal 4 only if the next slice treats `ambiguous_key` rows as not comparable and preserves the multi-user architecture boundary. It is not suitable for release or RC designation.
