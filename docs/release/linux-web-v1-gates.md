@@ -129,4 +129,3 @@ change before release.
 
 Release Forecast remains `NOT_READY` until every gate above has evidence and
 owner/PI approval. This file is a proposed gate package, not release approval.
-

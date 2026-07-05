@@ -77,4 +77,3 @@ If external output is imported, EIDP should record:
 Unresolved Copilot/NotebookLM policy keeps Linux/Web release at `NOT_READY` or
 `RC_ONLY`, depending on owner decision. It must not be silently bypassed by
 calling the comparison optional while still relying on it for release evidence.
-

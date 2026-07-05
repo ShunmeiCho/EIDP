@@ -81,4 +81,3 @@ Windows can be considered for archive only after:
 - Excel output and audit requirements are proven in the Web workflow.
 
 Until then, Windows is a maintained fallback boundary, not dead code.
-
