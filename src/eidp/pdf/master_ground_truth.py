@@ -75,6 +75,13 @@ def department_key(name: str | None) -> str:
     学科/科 suffix (end in 年制 or a parenthetical spec) are kept verbatim after NFKC.
     """
     normalized = normalize_text(name)
+    # Drop a trailing コース qualifier: the PDF writes '(ビジネスコース)' where master writes
+    # '（ビジネス）'; after NFKC the only residue is コース. Only at the trailing edge or just
+    # before a closing paren, never mid-name.
+    if normalized.endswith("コース"):
+        normalized = normalized[: -len("コース")]
+    elif normalized.endswith("コース)"):
+        normalized = normalized[: -len("コース)")] + ")"
     for suffix in _DEPT_SUFFIXES:
         if normalized.endswith(suffix) and len(normalized) > len(suffix):
             return normalized[: -len(suffix)]

@@ -14,7 +14,7 @@ are surfaced as a reconciliation report, NEVER a silent pass/fail and never auto
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from eidp.excel.master_loader import MasterMetricRow
 from eidp.excel.metric_policy import HARD_GATE_METRICS, RECONCILIATION_METRICS
@@ -24,6 +24,8 @@ __all__ = [
     "GateReport",
     "MetricDiffResult",
     "ReconciliationRow",
+    "TaxonomyReconciliationRow",
+    "align_department_fields",
     "build_reconciliation_report",
     "diff_metric_rows",
     "rung_gate",
@@ -211,3 +213,99 @@ def build_reconciliation_report(
             )
         )
     return rows
+
+
+# ----- 分野-agnostic department alignment + taxonomy reconciliation (Rung 1b decision) -----
+
+
+@dataclass(frozen=True)
+class TaxonomyReconciliationRow:
+    school_key: str
+    campus_key: str | None
+    department_gakka: str  # the 学科 key, 分野-agnostic
+    fiscal_year: int
+    master_field: str  # canonical 分野 as filed in master
+    pdf_field: str  # canonical 分野 as read from the official PDF
+    classification: str
+    operator_decision: str
+
+
+_ALIGN_SENTINEL = "*"
+_AlignScope = tuple[str, str | None, int]
+
+
+def _split_dept_key(department_key: str) -> tuple[str, str]:
+    field_part, sep, gakka = department_key.partition("|")
+    return (field_part, gakka) if sep else ("", department_key)
+
+
+def _bunya_by_gakka(rows: list[MasterMetricRow]) -> dict[_AlignScope, dict[str, set[str]]]:
+    out: dict[_AlignScope, dict[str, set[str]]] = {}
+    for row in rows:
+        field_part, gakka = _split_dept_key(row.department_key)
+        scope = (row.school_key, row.campus_key, row.fiscal_year)
+        out.setdefault(scope, {}).setdefault(gakka, set()).add(field_part)
+    return out
+
+
+def align_department_fields(
+    expected: list[MasterMetricRow],
+    actual: list[MasterMetricRow],
+) -> tuple[list[MasterMetricRow], list[MasterMetricRow], list[TaxonomyReconciliationRow]]:
+    """Join master and PDF on 学科 identity when their 分野 disagrees (Rung 1b decision).
+
+    Within each (school, campus, fiscal_year) scope, a 学科 key that maps to at most one 分野
+    on BOTH sides is collapsed to a 分野-agnostic key so equal values still join even when
+    master files the dept under a different 分野 than the PDF (e.g. 公務員学科 under 文化教養
+    vs 商業実務). A 学科 that appears under >1 分野 on the same side is a genuine collision and
+    keeps its full 分野|学科 key (compose_department_key's collision protection is preserved).
+    Emits one TaxonomyReconciliationRow per collapsed dept whose master/PDF 分野 differ; these
+    are NON-blocking (surfaced for owner decision, never auto-resolved).
+    """
+    exp_map = _bunya_by_gakka(expected)
+    act_map = _bunya_by_gakka(actual)
+
+    def collapsible(scope: _AlignScope, gakka: str) -> bool:
+        exp_fields = exp_map.get(scope, {}).get(gakka, set())
+        act_fields = act_map.get(scope, {}).get(gakka, set())
+        return len(exp_fields) <= 1 and len(act_fields) <= 1
+
+    def rewrite(rows: list[MasterMetricRow]) -> list[MasterMetricRow]:
+        out: list[MasterMetricRow] = []
+        for row in rows:
+            _field, gakka = _split_dept_key(row.department_key)
+            scope = (row.school_key, row.campus_key, row.fiscal_year)
+            if collapsible(scope, gakka):
+                out.append(replace(row, department_key=f"{_ALIGN_SENTINEL}|{gakka}"))
+            else:
+                out.append(row)
+        return out
+
+    taxonomy: list[TaxonomyReconciliationRow] = []
+    seen: set[tuple[_AlignScope, str]] = set()
+    for row in expected:
+        _field, gakka = _split_dept_key(row.department_key)
+        scope = (row.school_key, row.campus_key, row.fiscal_year)
+        if (scope, gakka) in seen or not collapsible(scope, gakka):
+            continue
+        master_fields = exp_map[scope][gakka]
+        pdf_fields = act_map.get(scope, {}).get(gakka, set())
+        if not pdf_fields:  # dept absent from PDF -> a missing_actual diff, not a 分野 delta
+            continue
+        master_field = next(iter(master_fields))
+        pdf_field = next(iter(pdf_fields))
+        if master_field != pdf_field:
+            seen.add((scope, gakka))
+            taxonomy.append(
+                TaxonomyReconciliationRow(
+                    school_key=row.school_key,
+                    campus_key=row.campus_key,
+                    department_gakka=gakka,
+                    fiscal_year=row.fiscal_year,
+                    master_field=master_field,
+                    pdf_field=pdf_field,
+                    classification="field_taxonomy_cross_source_delta",
+                    operator_decision="needs_owner_decision",
+                )
+            )
+    return rewrite(expected), rewrite(actual), taxonomy

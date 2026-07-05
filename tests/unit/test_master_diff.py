@@ -5,7 +5,11 @@ does not) / unexpected_actual (the "89 unmatched" class) / ambiguous_key (a key 
 cannot map uniquely). ambiguous_key is BLOCKING. Synthetic rows only; no file I/O.
 """
 
-from eidp.excel.master_diff import diff_metric_rows
+from eidp.excel.master_diff import (
+    TaxonomyReconciliationRow,
+    align_department_fields,
+    diff_metric_rows,
+)
 from eidp.excel.master_loader import MasterMetricRow
 
 
@@ -74,3 +78,43 @@ def test_numeric_tolerance() -> None:
         numeric_tolerance=1,
     )
     assert lenient.counts["exact_match"] == 1
+
+
+def test_align_collapses_bunya_when_gakka_unique_and_records_taxonomy() -> None:
+    # 8 山形校: master files 公務員2年制 under 文化教養, PDF under 商業実務; the 学科 is unique
+    # on each side -> collapse to a 分野-agnostic key so equal values still join, and record
+    # the 分野 divergence as a non-blocking taxonomy reconciliation.
+    expected = [_row("文化教養|公務員2年制", "enrollment", 115, campus="山形校")]
+    actual = [_row("商業実務|公務員2年制", "enrollment", 115, campus="山形校")]
+    exp2, act2, taxonomy = align_department_fields(expected, actual)
+    result = diff_metric_rows(exp2, act2)
+    assert result.counts["exact_match"] == 1
+    assert result.counts["missing_actual"] == 0
+    assert result.counts["unexpected_actual"] == 0
+    assert len(taxonomy) == 1
+    assert isinstance(taxonomy[0], TaxonomyReconciliationRow)
+    assert taxonomy[0].master_field == "文化教養"
+    assert taxonomy[0].pdf_field == "商業実務"
+    assert taxonomy[0].department_gakka == "公務員2年制"
+    assert taxonomy[0].operator_decision == "needs_owner_decision"
+
+
+def test_align_keeps_full_key_when_gakka_collides_under_two_bunya() -> None:
+    # same 学科 情報 filed under two 分野 = genuine collision -> not collapsed, kept distinct
+    # (compose_department_key's 分野| prefix protection is preserved).
+    expected = [_row("商業実務|情報", "enrollment", 50, campus="X"),
+                _row("工業|情報", "enrollment", 30, campus="X")]
+    actual = list(expected)
+    exp2, act2, taxonomy = align_department_fields(expected, actual)
+    result = diff_metric_rows(exp2, act2)
+    assert result.counts["exact_match"] == 2
+    assert not taxonomy
+
+
+def test_align_no_taxonomy_when_bunya_agree() -> None:
+    # 分野 agree on both sides -> collapse is a harmless no-op, no reconciliation row.
+    expected = [_row("商業実務|会計2年制", "enrollment", 70)]
+    actual = list(expected)
+    exp2, act2, taxonomy = align_department_fields(expected, actual)
+    assert diff_metric_rows(exp2, act2).counts["exact_match"] == 1
+    assert not taxonomy

@@ -60,6 +60,17 @@ def test_department_key_lands_pdf_onto_master() -> None:
     assert department_key(master_name) == department_key(pdf_name)
 
 
+def test_department_key_drops_trailing_course_qualifier() -> None:
+    # 8 山形校: PDF writes '(ビジネスコース)', master '（ビジネス）'. After NFKC the only
+    # residue is コース; stripping it at the trailing edge makes both key identically.
+    assert department_key("税理士・ビジネス学科(ビジネスコース)") == "税理士・ビジネス学科(ビジネス)"
+    assert department_key("税理士・ビジネス学科(ビジネスコース)") == department_key(
+        "税理士・ビジネス学科（ビジネス）"
+    )
+    # コース is only dropped at the trailing edge / before a closing paren, never mid-name.
+    assert department_key("公務員学科2年制") == "公務員学科2年制"
+
+
 def test_fy_metric_columns_capacity_enrollment_intl_offsets() -> None:
     # 収定 / 在籍 / 留学生 are consecutive; FY block start comes from the master layout.
     assert fy_metric_columns(2019) == (7, 8, 9)
