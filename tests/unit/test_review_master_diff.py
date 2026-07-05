@@ -34,6 +34,8 @@ def _record(
         source_page_url="https://example.ac.jp/disclosure/",
         source_pdf="pdfs/intake-001.pdf",
         department_name=department_name,
+        field_category="商業実務",
+        course_name="専門課程",
         metric=metric,
         extracted_value=extracted_value,
         corrected_value=corrected_value,
@@ -69,8 +71,14 @@ def _expected(
         department_name=department_name,
         metric=metric,
         expected_value=expected_value,
+        field_category="商業実務",
+        course_name=None,
+        day_or_evening="昼",
+        duration_years="2",
+        master_row_id="学科別!3",
+        operator_mapping_id=None,
         source_sheet="学科別",
-        source_cell=None,
+        source_cell="H3",
     )
 
 
@@ -143,6 +151,8 @@ def test_diff_report_includes_evidence_columns() -> None:
     rows = list(csv.DictReader(io.StringIO(report)))
 
     assert rows[0]["match_status"] == "value_mismatch"
+    assert rows[0]["field_category"] == "商業実務"
+    assert rows[0]["course_name"] == "専門課程"
     assert rows[0]["source_pdf"] == "pdfs/intake-001.pdf"
     assert rows[0]["page_no"] == "1"
     assert rows[0]["table_index"] == "2"
@@ -152,6 +162,35 @@ def test_diff_report_includes_evidence_columns() -> None:
     assert rows[0]["raw_value"] == "37"
     assert rows[0]["canonical_metric"] == "enrollment"
     assert rows[0]["reviewed_by"] == "operator-a"
+    assert rows[0]["master_row_id"] == "学科別!3"
+
+
+def test_duplicate_master_keys_are_ambiguous_not_silently_overwritten() -> None:
+    diff = diff_reviewed_against_master(
+        _reviewed(_record(ReviewStatus.ACCEPTED, extracted_value=37)),
+        [
+            _expected(expected_value=37),
+            _expected(expected_value=40),
+        ],
+    )
+
+    assert len(diff) == 1
+    assert diff[0].match_status == MatchStatus.AMBIGUOUS_KEY
+    assert diff[0].expected_value is None
+    assert diff[0].mismatch_reason == "duplicate master rows=2"
+
+
+def test_duplicate_reviewed_keys_are_ambiguous() -> None:
+    diff = diff_reviewed_against_master(
+        _reviewed(
+            _record(ReviewStatus.ACCEPTED, extracted_value=37),
+            _record(ReviewStatus.CORRECTED, extracted_value=38, corrected_value=39),
+        ),
+        [_expected(expected_value=37)],
+    )
+
+    assert [row.match_status for row in diff] == [MatchStatus.AMBIGUOUS_KEY, MatchStatus.AMBIGUOUS_KEY]
+    assert all(row.mismatch_reason == "duplicate reviewed rows=2" for row in diff)
 
 
 def test_load_master_expected_subset_reads_xlsx_without_writing(tmp_path: Path) -> None:
@@ -182,5 +221,8 @@ def test_load_master_expected_subset_reads_xlsx_without_writing(tmp_path: Path) 
         "enrollment": 37,
         "intl_students": 3,
     }
-    assert {row.department_name for row in expected} == {"テスト"}
+    assert {row.department_name for row in expected} == {"テスト学科"}
+    assert {row.field_category for row in expected} == {"商業実務"}
+    assert {row.master_row_id for row in expected} == {"学科別!3"}
+    assert {row.source_cell for row in expected} == {"H3", "I3", "J3"}
     assert all(row.school_name == "東京テスト専門学校" for row in expected)

@@ -28,6 +28,8 @@ def _record(
         source_page_url="https://example.ac.jp/disclosure/",
         source_pdf="pdfs/intake-001.pdf",
         department_name=department_name,
+        field_category="商業実務",
+        course_name="専門課程",
         metric=metric,
         extracted_value=extracted_value,
         corrected_value=corrected_value,
@@ -86,6 +88,8 @@ def test_normalized_review_report_includes_final_value_and_evidence_columns() ->
 
     assert rows[0]["school_name"] == "東京テスト専門学校"
     assert rows[0]["department_name"] == "テスト学科"
+    assert rows[0]["field_category"] == "商業実務"
+    assert rows[0]["course_name"] == "専門課程"
     assert rows[0]["metric"] == "capacity"
     assert rows[0]["original_value"] == "40"
     assert rows[0]["corrected_value"] == "42"
