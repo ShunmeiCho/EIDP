@@ -18,6 +18,7 @@ Release Forecast: `NOT_READY`
 - Goal 3C: normalized review report, read-only master expected subset loading, reviewed-row diff, mismatch CSV, and lightweight Web diff page.
 - Goal 3D: reviewed-row key hardening, `field_category` / `course_name` preservation, master row identity, and `ambiguous_key` reporting.
 - Goal 3E: multi-user architecture boundary for React/FastAPI/PostgreSQL migration planning.
+- Goal 3F-A: Linux server selection requirements and internal LAN browser access gate definition.
 - Goal 4: external Copilot/NotebookLM/manual CSV/XLSX import, canonical metric normalization, and TRUE/FALSE double-check comparison for unique comparable rows.
 
 ## Current Chain
@@ -30,6 +31,7 @@ PDF intake
 -> master expected subset diff
 -> ambiguous-key gated mismatch report
 -> multi-user architecture boundary
+-> Linux server selection / LAN access gate definition
 -> external extraction import
 -> TRUE/FALSE double-check report
 
@@ -53,6 +55,8 @@ PDF intake
   - Result: success, no issues found in 24 source files.
 - `uv run --extra dev python -c "import eidp.web.app; import eidp.web.pages.double_check"`
   - Result: passed.
+- `git diff --check`
+  - Result: passed for Goal 3F-A docs/templates.
 - `uv run pytest -q`
   - Result: 2203 passed, 3 skipped, 5 warnings.
 - Real master ambiguity smoke:
@@ -64,8 +68,9 @@ PDF intake
 - Automatic Copilot/NotebookLM API integration or external PDF upload.
 - Excel/XLOOKUP export.
 - Final Excel write.
+- Selected Linux server assignment.
 - Linux server deployment proof.
-- Intended network browser access validation.
+- Intended user-PC internal LAN browser access validation.
 - Authentication, PostgreSQL, or React/Next.js.
 - Automatic PDF discovery.
 - Automatic fiscal-year judgment.
@@ -74,6 +79,32 @@ PDF intake
 - Operator mapping UI or workflow for resolving remaining `ambiguous_key` rows.
 - React/FastAPI/PostgreSQL implementation.
 - Authentication, roles, locking implementation, and job queue implementation.
+
+## Linux Server Selection / LAN Gate
+
+Goal 3F-A records that no concrete Linux server has been selected yet. The
+meeting direction establishes Linux/Web and browser use, but it does not assign
+the host, IP/DNS, reverse proxy, filesystem paths, port/firewall owner, backup
+owner, or maintenance process.
+
+Added gate documents:
+
+- `docs/runbooks/linux-server-selection.md`
+- `docs/release/internal-lan-browser-access-gate.md`
+- `docs/release/linux-web-network-smoke-test.md`
+- `deploy/linux/server-requirements.md`
+- `deploy/linux/env.example`
+
+Current release position:
+
+- `localhost` and server-local smoke are not deployment proof.
+- Same internal IP range is necessary but not sufficient.
+- User-PC browser access to the selected Linux server URL is required.
+- Users do not operate through Linux desktop, SSH, or remote screen.
+- PDF upload, CSV/XLSX upload, and report download must work from the user PC.
+- Docker is optional and must not be assumed.
+- Streamlit remains MVP/internal console; React/FastAPI/PostgreSQL remain the target formal multi-user architecture.
+- Repository guidance keeps Streamlit localhost-bound; LAN access should use an approved internal reverse proxy.
 
 ## Key-Collision Audit
 
