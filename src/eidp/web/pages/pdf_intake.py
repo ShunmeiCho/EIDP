@@ -7,6 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
+from eidp.pipeline.extraction_queue import ensure_extraction_queue
 from eidp.pipeline.pdf_intake import (
     PdfIntakeMetadata,
     PdfIntakeValidationError,
@@ -110,6 +111,7 @@ def _render_url_csv_upload(intake_root: Path) -> None:
 
 def _render_queue(intake_root: Path) -> None:
     records = load_intake_queue(intake_root)
+    extraction_items = ensure_extraction_queue(intake_root)
     text_count = sum(1 for record in records if record.lane.value == "text_pdf_main")
     exception_count = sum(1 for record in records if record.lane.value.startswith("exception_"))
     url_count = sum(1 for record in records if record.lane.value == "url_registered")
@@ -117,7 +119,7 @@ def _render_queue(intake_root: Path) -> None:
     col_text.metric("Text PDF", text_count)
     col_exception.metric("Exception/manual/OCR", exception_count)
     col_url.metric("URL registered", url_count)
-    render_intake_table(records)
+    render_intake_table(records, extraction_items=extraction_items)
 
 
 def _metadata_inputs(prefix: str) -> tuple[str, str, int, str, str]:
