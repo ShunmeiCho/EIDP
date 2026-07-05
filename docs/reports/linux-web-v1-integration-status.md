@@ -18,6 +18,7 @@ Release Forecast: `NOT_READY`
 - Goal 3C: normalized review report, read-only master expected subset loading, reviewed-row diff, mismatch CSV, and lightweight Web diff page.
 - Goal 3D: reviewed-row key hardening, `field_category` / `course_name` preservation, master row identity, and `ambiguous_key` reporting.
 - Goal 3E: multi-user architecture boundary for React/FastAPI/PostgreSQL migration planning.
+- Goal 4: external Copilot/NotebookLM/manual CSV/XLSX import, canonical metric normalization, and TRUE/FALSE double-check comparison for unique comparable rows.
 
 ## Current Chain
 
@@ -29,6 +30,8 @@ PDF intake
 -> master expected subset diff
 -> ambiguous-key gated mismatch report
 -> multi-user architecture boundary
+-> external extraction import
+-> TRUE/FALSE double-check report
 
 ## Verification
 
@@ -42,6 +45,14 @@ PDF intake
   - Result: success, no issues found in 20 source files.
 - `uv run python -c "import eidp.web.app; import eidp.web.pages.review_diff"`
   - Result: passed.
+- `uv run --extra dev pytest tests/unit/test_external_extraction_import.py tests/unit/test_double_check_compare.py -q`
+  - Result: 11 passed.
+- `uv run --extra dev ruff check src/eidp/pipeline/pdf_intake.py src/eidp/pipeline/extraction_queue.py src/eidp/pipeline/extraction_review.py src/eidp/pipeline/review_report.py src/eidp/pipeline/review_master_diff.py src/eidp/pipeline/external_extraction_import.py src/eidp/pipeline/double_check_compare.py src/eidp/web tests/unit/test_pdf_intake.py tests/unit/test_extraction_queue.py tests/unit/test_extraction_review.py tests/unit/test_review_report.py tests/unit/test_review_master_diff.py tests/unit/test_external_extraction_import.py tests/unit/test_double_check_compare.py`
+  - Result: all checks passed.
+- `uv run --extra dev mypy src/eidp/pipeline/pdf_intake.py src/eidp/pipeline/extraction_queue.py src/eidp/pipeline/extraction_review.py src/eidp/pipeline/review_report.py src/eidp/pipeline/review_master_diff.py src/eidp/pipeline/external_extraction_import.py src/eidp/pipeline/double_check_compare.py src/eidp/web`
+  - Result: success, no issues found in 24 source files.
+- `uv run --extra dev python -c "import eidp.web.app; import eidp.web.pages.double_check"`
+  - Result: passed.
 - `uv run pytest -q`
   - Result: 2203 passed, 3 skipped, 5 warnings.
 - Real master ambiguity smoke:
@@ -50,8 +61,7 @@ PDF intake
 
 ## Known Not Included
 
-- Copilot/NotebookLM import.
-- TRUE/FALSE double-check comparison.
+- Automatic Copilot/NotebookLM API integration or external PDF upload.
 - Excel/XLOOKUP export.
 - Final Excel write.
 - Linux server deployment proof.
@@ -76,7 +86,7 @@ Result:
 - K2 `school_name | course_name | department_name | fiscal_year | metric`: not stable.
 - K3 `school_name | field_category | course_name | department_name | day_or_evening | duration_years | fiscal_year | metric`: still has collisions.
 - Goal 3D now reports ambiguous keys instead of silently matching them.
-- Goal 4 may only compare rows that resolve to a unique reviewed/external key; `ambiguous_key`, `needs_review`, and `excluded` rows remain not comparable and must not become Excel-ready.
+- Goal 4 compares only rows that resolve to a unique reviewed/external key; `ambiguous_key`, `needs_review`, and `excluded` rows remain not comparable and do not become Excel-ready.
 
 ## Multi-User Architecture Boundary
 
@@ -91,10 +101,12 @@ Decision summary:
 - React is the target formal multi-user UI.
 - FastAPI is the target backend API layer.
 - PostgreSQL is the target multi-user persistence layer.
-- Goal 4 may proceed only on unique comparable rows; `ambiguous_key`, `needs_review`, and `excluded` remain not comparable.
+- Goal 4 proceeds only on unique comparable rows; `ambiguous_key`, `needs_review`, and `excluded` remain not comparable.
 
 ## Release Forecast
 
 `NOT_READY`
 
-This integration line is suitable as the base for Goal 4 only if the next slice treats `ambiguous_key` rows as not comparable and preserves the multi-user architecture boundary. It is not suitable for release or RC designation.
+This integration line is suitable as the base for Goal 5 only if the next slice keeps double-check mismatches,
+`ambiguous_key`, `needs_review`, and `excluded` rows out of the Excel/XLOOKUP output. It is not suitable for release
+or RC designation.
