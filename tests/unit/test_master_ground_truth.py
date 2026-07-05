@@ -66,6 +66,11 @@ def test_department_key_never_collapses_to_empty_key() -> None:
     assert department_key("コース") == "コース"  # コース fully stripped -> guarded to pre-strip
     assert department_key("　コース　") == "コース"
     assert department_key("科") == "科"  # single-char suffix kept (len guard, no strip)
+    # Codex Rung-1c merge review: a bare '学科' must NOT collapse to '学' via the 科-strip.
+    # It is a header/garbage token, not a department; preserved verbatim so it can never
+    # false-merge into a 1-char key on either side of review_master_diff / double_check.
+    assert department_key("学科") == "学科"
+    assert department_key("　学科　") == "学科"
     assert department_key("") == ""  # genuinely empty input has no department name
 
 

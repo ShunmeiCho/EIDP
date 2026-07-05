@@ -48,6 +48,11 @@ _FIELD_SEPARATORS = str.maketrans("", "", "・/")
 
 # Longest-first so 学科 is stripped before the bare 科.
 _DEPT_SUFFIXES = ("学科", "科")
+# A name that is nothing but a strippable suffix token is a header/garbage row, not a
+# department. Stripping would reduce it to a meaningless residue (e.g. '学科' -> '学'),
+# which the empty-key guard does not catch because the residue is non-empty. These tokens
+# are preserved verbatim so a stray suffix-only row never false-merges into a short key.
+_PURE_SUFFIX_TOKENS = frozenset({*_DEPT_SUFFIXES, "コース"})
 
 
 def normalize_text(text: str | None) -> str:
@@ -75,6 +80,11 @@ def department_key(name: str | None) -> str:
     学科/科 suffix (end in 年制 or a parenthetical spec) are kept verbatim after NFKC.
     """
     normalized = normalize_text(name)
+    # Suffix-only guard: a name that is exactly a strippable token ('学科'/'科'/'コース')
+    # is not a department -- return it verbatim so it never collapses to a short residue
+    # ('学科' -> '学') that could false-merge. This completes the empty-key guard below.
+    if normalized in _PURE_SUFFIX_TOKENS:
+        return normalized
     stripped = normalized
     # Drop a trailing コース qualifier: the PDF writes '(ビジネスコース)' where master writes
     # '（ビジネス）'; after NFKC the only residue is コース. Only at the trailing edge or just
