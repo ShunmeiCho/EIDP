@@ -20,13 +20,17 @@ from eidp.excel.master_loader import MasterMetricRow
 from eidp.excel.metric_policy import HARD_GATE_METRICS, RECONCILIATION_METRICS
 
 __all__ = [
+    "DepartmentCollisionRow",
     "DiffEntry",
     "GateReport",
     "MetricDiffResult",
+    "ReconciliationArtifacts",
     "ReconciliationRow",
     "TaxonomyReconciliationRow",
     "align_department_fields",
+    "build_reconciliation_artifacts",
     "build_reconciliation_report",
+    "detect_department_key_collisions",
     "diff_metric_rows",
     "rung_gate",
 ]
@@ -154,7 +158,9 @@ def rung_gate(
             gate_failures.append(entry)
         elif entry.metric in gate_metrics and entry.category != "exact_match":
             gate_failures.append(entry)
-        elif entry.metric in reconcile_metrics and entry.category == "value_mismatch":
+        elif entry.metric in reconcile_metrics and entry.category != "exact_match":
+            # Any non-exact reconcile-metric entry (value_mismatch AND missing/unexpected) is
+            # surfaced as a non-blocking reconciliation, never dropped (G4 fall-through fix).
             reconciliation.append(entry)
     passed = not gate_failures
     if not passed:
@@ -309,3 +315,77 @@ def align_department_fields(
                 )
             )
     return rewrite(expected), rewrite(actual), taxonomy
+
+
+# ----- Guardrail G2: loose-key department-uniqueness invariant -----
+
+
+@dataclass(frozen=True)
+class DepartmentCollisionRow:
+    """A 学科 key that is NOT a unique department identifier within a (school, campus, FY)
+    scope -- it maps to >1 分野 on one side, so a loose (分野-agnostic) join is unsafe and
+    must block. Surfaced for human disambiguation; never silently loose-matched."""
+
+    school_key: str
+    campus_key: str | None
+    department_gakka: str
+    fiscal_year: int
+    fields: tuple[str, ...]  # the >=2 分野 the 学科 is filed under on the offending side
+    side: str  # "master" | "pdf"
+
+
+def detect_department_key_collisions(
+    expected: list[MasterMetricRow],
+    actual: list[MasterMetricRow],
+) -> list[DepartmentCollisionRow]:
+    """Flag every 学科 key that maps to >1 分野 on a side (loose-key uniqueness violation)."""
+    out: list[DepartmentCollisionRow] = []
+    for side, rows in (("master", expected), ("pdf", actual)):
+        for scope, gakka_map in _bunya_by_gakka(rows).items():
+            for gakka, fields in gakka_map.items():
+                if len(fields) > 1:
+                    out.append(
+                        DepartmentCollisionRow(
+                            school_key=scope[0],
+                            campus_key=scope[1],
+                            department_gakka=gakka,
+                            fiscal_year=scope[2],
+                            fields=tuple(sorted(fields)),
+                            side=side,
+                        )
+                    )
+    return out
+
+
+# ----- Guardrail G4: structured reconciliation artifacts -----
+
+
+@dataclass(frozen=True)
+class ReconciliationArtifacts:
+    """Every non-exact outcome consolidated into typed, owner-visible buckets so nothing is
+    silently dropped: reconcile-metric (capacity) deltas, 分野-taxonomy deltas, and hard-gate
+    value_mismatches (the master_expected_error class, e.g. 06 在籍 91 vs official PDF 92)."""
+
+    capacity: tuple[ReconciliationRow, ...]
+    taxonomy: tuple[TaxonomyReconciliationRow, ...]
+    hard_gate_discrepancies: tuple[DiffEntry, ...]
+
+
+def build_reconciliation_artifacts(
+    result: MetricDiffResult,
+    taxonomy: list[TaxonomyReconciliationRow],
+    *,
+    gate_metrics: frozenset[str] = HARD_GATE_METRICS,
+    reconcile_metrics: frozenset[str] = RECONCILIATION_METRICS,
+) -> ReconciliationArtifacts:
+    """Bundle capacity reconciliations, 分野-taxonomy reconciliations, and hard-gate
+    value_mismatches into one structured, auditable artifact."""
+    capacity = tuple(build_reconciliation_report(result, reconcile_metrics=reconcile_metrics))
+    hard_gate = tuple(
+        e for e in result.entries if e.metric in gate_metrics and e.category == "value_mismatch"
+    )
+    return ReconciliationArtifacts(
+        capacity=capacity,
+        taxonomy=tuple(taxonomy),
+        hard_gate_discrepancies=hard_gate,
+    )

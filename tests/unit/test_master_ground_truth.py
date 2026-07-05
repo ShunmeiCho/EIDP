@@ -60,6 +60,15 @@ def test_department_key_lands_pdf_onto_master() -> None:
     assert department_key(master_name) == department_key(pdf_name)
 
 
+def test_department_key_never_collapses_to_empty_key() -> None:
+    # Guardrail (pre-Rung1c): a name that is nothing but strippable suffixes must NOT become
+    # '' -- an empty key would false-merge unrelated departments. Fall back to pre-strip form.
+    assert department_key("コース") == "コース"  # コース fully stripped -> guarded to pre-strip
+    assert department_key("　コース　") == "コース"
+    assert department_key("科") == "科"  # single-char suffix kept (len guard, no strip)
+    assert department_key("") == ""  # genuinely empty input has no department name
+
+
 def test_department_key_drops_trailing_course_qualifier() -> None:
     # 8 山形校: PDF writes '(ビジネスコース)', master '（ビジネス）'. After NFKC the only
     # residue is コース; stripping it at the trailing edge makes both key identically.

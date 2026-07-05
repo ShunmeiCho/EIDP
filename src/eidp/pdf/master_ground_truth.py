@@ -75,17 +75,22 @@ def department_key(name: str | None) -> str:
     学科/科 suffix (end in 年制 or a parenthetical spec) are kept verbatim after NFKC.
     """
     normalized = normalize_text(name)
+    stripped = normalized
     # Drop a trailing コース qualifier: the PDF writes '(ビジネスコース)' where master writes
     # '（ビジネス）'; after NFKC the only residue is コース. Only at the trailing edge or just
     # before a closing paren, never mid-name.
-    if normalized.endswith("コース"):
-        normalized = normalized[: -len("コース")]
-    elif normalized.endswith("コース)"):
-        normalized = normalized[: -len("コース)")] + ")"
+    if stripped.endswith("コース"):
+        stripped = stripped[: -len("コース")]
+    elif stripped.endswith("コース)"):
+        stripped = stripped[: -len("コース)")] + ")"
     for suffix in _DEPT_SUFFIXES:
-        if normalized.endswith(suffix) and len(normalized) > len(suffix):
-            return normalized[: -len(suffix)]
-    return normalized
+        if stripped.endswith(suffix) and len(stripped) > len(suffix):
+            stripped = stripped[: -len(suffix)]
+            break
+    # Empty-key guard (pre-Rung1c): a name that is nothing but strippable suffixes must not
+    # collapse to '' -- an empty key would false-merge unrelated departments. Fall back to the
+    # pre-strip normalized form so the identity is never lost.
+    return stripped or normalized
 
 
 def fy_metric_columns(fiscal_year: int) -> tuple[int, int, int]:

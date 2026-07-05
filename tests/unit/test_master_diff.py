@@ -6,8 +6,12 @@ cannot map uniquely). ambiguous_key is BLOCKING. Synthetic rows only; no file I/
 """
 
 from eidp.excel.master_diff import (
+    DepartmentCollisionRow,
+    ReconciliationArtifacts,
     TaxonomyReconciliationRow,
     align_department_fields,
+    build_reconciliation_artifacts,
+    detect_department_key_collisions,
     diff_metric_rows,
 )
 from eidp.excel.master_loader import MasterMetricRow
@@ -118,3 +122,48 @@ def test_align_no_taxonomy_when_bunya_agree() -> None:
     exp2, act2, taxonomy = align_department_fields(expected, actual)
     assert diff_metric_rows(exp2, act2).counts["exact_match"] == 1
     assert not taxonomy
+
+
+# ----- Guardrail G2: loose-key uniqueness invariant -----
+
+
+def test_detect_collision_when_gakka_maps_to_two_bunya_on_a_side() -> None:
+    # 情報 filed under two 分野 on the master side is NOT a unique loose key -> collision.
+    # A loose (分野-agnostic) join cannot be trusted for it; the ambiguity must block.
+    expected = [_row("商業実務|情報", "enrollment", 50, campus="X"),
+                _row("工業|情報", "enrollment", 30, campus="X")]
+    actual = [_row("商業実務|情報", "enrollment", 50, campus="X")]
+    collisions = detect_department_key_collisions(expected, actual)
+    assert len(collisions) == 1
+    assert isinstance(collisions[0], DepartmentCollisionRow)
+    assert collisions[0].department_gakka == "情報"
+    assert set(collisions[0].fields) == {"商業実務", "工業"}
+
+
+def test_no_collision_when_every_gakka_is_unique_per_side() -> None:
+    expected = [_row("商業実務|会計2年制", "enrollment", 70),
+                _row("文化教養|公務員2年制", "enrollment", 115)]
+    actual = list(expected)
+    assert detect_department_key_collisions(expected, actual) == []
+
+
+# ----- Guardrail G4: structured reconciliation artifacts -----
+
+
+def test_reconciliation_artifacts_group_capacity_taxonomy_and_hard_gate() -> None:
+    expected = [_row("文化教養|公務員2年制", "enrollment", 115),  # 分野 divergence -> taxonomy
+                _row("商業実務|会計2年制", "enrollment", 104),  # hard-gate value_mismatch (06 class)
+                _row("商業実務|会計2年制", "capacity", 140)]  # capacity -> reconciliation
+    actual = [_row("商業実務|公務員2年制", "enrollment", 115),
+              _row("商業実務|会計2年制", "enrollment", 100),
+              _row("商業実務|会計2年制", "capacity", 120)]
+    exp2, act2, taxonomy = align_department_fields(expected, actual)
+    result = diff_metric_rows(exp2, act2)
+    artifacts = build_reconciliation_artifacts(result, taxonomy)
+    assert isinstance(artifacts, ReconciliationArtifacts)
+    assert len(artifacts.capacity) == 1
+    assert len(artifacts.taxonomy) == 1
+    assert len(artifacts.hard_gate_discrepancies) == 1
+    assert artifacts.hard_gate_discrepancies[0].metric == "enrollment"
+    assert artifacts.hard_gate_discrepancies[0].expected_value == 104
+    assert artifacts.hard_gate_discrepancies[0].actual_value == 100

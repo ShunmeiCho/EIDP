@@ -19,7 +19,12 @@ from pathlib import Path
 import pytest
 
 from eidp.excel.actual_row_converter import convert_to_master_metric_rows
-from eidp.excel.master_diff import align_department_fields, diff_metric_rows, rung_gate
+from eidp.excel.master_diff import (
+    align_department_fields,
+    detect_department_key_collisions,
+    diff_metric_rows,
+    rung_gate,
+)
 from eidp.excel.master_loader import load_master_metric_rows
 from eidp.pdf.master_ground_truth import normalize_text
 from eidp.pdf.pinned_manifest import PinnedManifestRow, load_pinned_manifest
@@ -48,11 +53,12 @@ def _run(row: PinnedManifestRow):
     )
     expected = load_master_metric_rows(
         _MASTER, corporation_name=row.school_key, school_name=row.campus_key,
-        fiscal_year=row.fiscal_year,
+        fiscal_year=row.fiscal_year, prefecture=row.prefecture,
     )
+    collisions = detect_department_key_collisions(expected, actual)
     exp2, act2, taxonomy = align_department_fields(expected, actual)
     result = diff_metric_rows(exp2, act2)
-    return result, rung_gate(result), taxonomy
+    return result, rung_gate(result), taxonomy, collisions
 
 
 def _row(campus_key: str) -> PinnedManifestRow:
@@ -81,7 +87,8 @@ def test_rung1b_three_gated_schools_pass_enrollment_intl_hard_gate() -> None:
     for row in gated:
         if not (Path(_SAMPLE or ".") / Path(row.pdf_paths[0]).name).exists():
             pytest.skip(f"sample not found for {row.campus_key}")
-        result, gate, _taxonomy = _run(row)
+        result, gate, _taxonomy, collisions = _run(row)
+        assert collisions == [], (row.campus_key, collisions)  # G2: loose-key uniqueness holds
         assert gate.passed, (row.campus_key, [(e.key, e.category) for e in gate.gate_failures])
         assert result.counts["ambiguous_key"] == 0, row.campus_key
         assert result.counts["missing_actual"] == 0, row.campus_key
@@ -98,7 +105,7 @@ def test_rung1b_yamagata_bunya_taxonomy_is_reconciled_not_blocking() -> None:
     row = _row("大原ビジネス公務員専門学校山形校")
     if not (Path(_SAMPLE or ".") / Path(row.pdf_paths[0]).name).exists():
         pytest.skip("山形校 sample not found")
-    _result, gate, taxonomy = _run(row)
+    _result, gate, taxonomy, _collisions = _run(row)
     assert gate.passed  # 分野 divergence must NOT fail the hard gate
     gakka = {t.department_gakka: t for t in taxonomy}
     assert "公務員学科2年制" in gakka
@@ -115,7 +122,7 @@ def test_rung1b_morioka_is_a_documented_master_expected_error() -> None:
     assert row.status == "pinned_master_finding"
     if not (Path(_SAMPLE or ".") / Path(row.pdf_paths[0]).name).exists():
         pytest.skip("盛岡校 sample not found")
-    result, gate, _taxonomy = _run(row)
+    result, gate, _taxonomy, _collisions = _run(row)
     assert not gate.passed
     hard_fail = [e for e in gate.gate_failures if e.metric in _HARD_GATE]
     assert len(hard_fail) == 1

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from eidp.excel.master_loader import load_master_metric_rows
+from eidp.excel.master_loader import SkippedDepartmentRow, load_master_metric_rows
 
 
 def _make_master(tmp_path: Path) -> Path:
@@ -99,6 +99,24 @@ def test_blank_enrollment_department_is_skipped_but_zero_is_kept(tmp_path: Path)
     assert "文化教養|停止" in keys  # 在籍0 kept: 0 is a real value, not blank
     assert "文化教養|廃止" not in keys  # blank 在籍 -> inactive FY row, skipped
     assert len(rows) == 6  # two kept depts x three metric rows
+
+
+def test_blank_enrollment_skip_is_recorded_with_reason_not_silent(tmp_path: Path) -> None:
+    """Guardrail (pre-Rung1c): a blank-在籍 dept is skipped from the metric rows but MUST be
+    recorded (no silent skip) so an operator can audit why a master row was dropped."""
+    path = _make_master_with_blank_dept(tmp_path)
+    skipped: list[SkippedDepartmentRow] = []
+    rows = load_master_metric_rows(
+        path, corporation_name="大原学園", school_name="札幌校", fiscal_year=2019,
+        skipped=skipped,
+    )
+    assert {r.department_key for r in rows} == {"商業実務|会計2年制", "文化教養|停止"}
+    assert len(skipped) == 1
+    dropped = skipped[0]
+    assert dropped.department_key == "文化教養|廃止"
+    assert dropped.skip_reason == "blank_enrollment_legacy"
+    assert dropped.fiscal_year == 2019
+    assert dropped.campus_key == "札幌校"
 
 
 @pytest.mark.skipif(not Path("data/master.xlsx").exists(), reason="operator data/master.xlsx absent")
