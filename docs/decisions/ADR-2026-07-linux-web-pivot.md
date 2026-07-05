@@ -128,4 +128,3 @@ Tradeoffs:
 This decision package does not declare `READY`, does not change
 `docs/reports/current-release-status.md`, and does not change the v548 Windows
 canary evidence. The release forecast remains `NOT_READY`.
-
