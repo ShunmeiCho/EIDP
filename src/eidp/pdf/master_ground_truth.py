@@ -23,6 +23,7 @@ __all__ = [
     "ExpectedDepartmentRow",
     "canonical_field_category",
     "department_key",
+    "department_key_strict",
     "fy_metric_columns",
     "normalize_text",
 ]
@@ -72,12 +73,10 @@ def canonical_field_category(value: str | None) -> str:
     return _FIELD_ALIASES.get(normalized, normalized)
 
 
-def department_key(name: str | None) -> str:
-    """Normalize a 学科名 and strip exactly one trailing 学科/科 suffix.
-
-    master stores 'ビジネスキャリア2年制学科'; the PDF gives 'ビジネスキャリア２年制'
-    (full-width, newline, no suffix). Both key to 'ビジネスキャリア2年制'. Names with no
-    学科/科 suffix (end in 年制 or a parenthetical spec) are kept verbatim after NFKC.
+def _normalize_department(name: str | None, *, collapse_bare_course: bool) -> str:
+    """Shared core for the department join keys. ``collapse_bare_course`` selects the
+    loose (``department_key``) vs strict (``department_key_strict``) variant -- see those
+    two public wrappers for the identity-preservation contract.
     """
     normalized = normalize_text(name)
     # Suffix-only guard: a name that is exactly a strippable token ('学科'/'科'/'コース')
@@ -88,8 +87,10 @@ def department_key(name: str | None) -> str:
     stripped = normalized
     # Drop a trailing コース qualifier: the PDF writes '(ビジネスコース)' where master writes
     # '（ビジネス）'; after NFKC the only residue is コース. Only at the trailing edge or just
-    # before a closing paren, never mid-name.
-    if stripped.endswith("コース"):
+    # before a closing paren, never mid-name. The BARE trailing form ('ビジネスコース') is
+    # identity-CHANGING (a course track vs its parent 科), so the strict variant skips it while
+    # the parenthesized spec form ('(ビジネスコース)') is identity-preserving and always folded.
+    if collapse_bare_course and stripped.endswith("コース"):
         stripped = stripped[: -len("コース")]
     elif stripped.endswith("コース)"):
         stripped = stripped[: -len("コース)")] + ")"
@@ -101,6 +102,30 @@ def department_key(name: str | None) -> str:
     # collapse to '' -- an empty key would false-merge unrelated departments. Fall back to the
     # pre-strip normalized form so the identity is never lost.
     return stripped or normalized
+
+
+def department_key(name: str | None) -> str:
+    """Normalize a 学科名 and strip exactly one trailing 学科/科 suffix.
+
+    master stores 'ビジネスキャリア2年制学科'; the PDF gives 'ビジネスキャリア２年制'
+    (full-width, newline, no suffix). Both key to 'ビジネスキャリア2年制'. Names with no
+    学科/科 suffix (end in 年制 or a parenthetical spec) are kept verbatim after NFKC. A bare
+    trailing コース ('ビジネスコース') is folded to its parent ('ビジネス') for the loose join.
+    """
+    return _normalize_department(name, collapse_bare_course=True)
+
+
+def department_key_strict(name: str | None) -> str:
+    """Like ``department_key`` but NEVER collapses a bare trailing コース.
+
+    ``department_key`` folds 'ビジネスコース' -> 'ビジネス' so master/PDF spelling variants join;
+    that same fold also merges two genuinely DISTINCT granularities (a コース track vs its parent
+    科). The strict key preserves identity-preserving normalizations (NFKC, whitespace, the
+    一 trailing 学科/科 suffix, and the parenthesized '(…コース)' spec) but keeps a bare trailing
+    コース distinct, so diff engines can detect a loose-key merge that only survives via that
+    identity-changing fold and refuse to certify it as a clean match.
+    """
+    return _normalize_department(name, collapse_bare_course=False)
 
 
 def fy_metric_columns(fiscal_year: int) -> tuple[int, int, int]:

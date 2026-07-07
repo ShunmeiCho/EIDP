@@ -193,6 +193,30 @@ def test_duplicate_reviewed_keys_are_ambiguous() -> None:
     assert all(row.mismatch_reason == "duplicate reviewed rows=2" for row in diff)
 
 
+def test_cross_side_course_granularity_collision_is_ambiguous_not_false_match() -> None:
+    # A reviewed 'ビジネスコース' (a course track) and a master 'ビジネス' (its parent 科) collapse to
+    # the same loose department_key, so the diff joins them 1:1. With equal values that produced a
+    # false MATCH before the strict-key guard. It MUST now be AMBIGUOUS_KEY -- two distinct
+    # granularities are not the same department and cannot be certified as matching.
+    diff = diff_reviewed_against_master(
+        _reviewed(_record(ReviewStatus.ACCEPTED, department_name="ビジネスコース", extracted_value=100)),
+        [_expected(department_name="ビジネス", expected_value=100)],
+    )
+    assert [row.match_status for row in diff] == [MatchStatus.AMBIGUOUS_KEY]
+    assert "granularity collision" in diff[0].mismatch_reason
+
+
+def test_identity_preserving_suffix_variant_still_matches() -> None:
+    # The guard must NOT over-flag the designed master(学科-suffixed)/PDF(bare) spelling variation:
+    # master '情報システム学科' vs reviewed '情報システム' share the strict key, so equal values stay
+    # a clean MATCH.
+    diff = diff_reviewed_against_master(
+        _reviewed(_record(ReviewStatus.ACCEPTED, department_name="情報システム", extracted_value=42)),
+        [_expected(department_name="情報システム学科", expected_value=42)],
+    )
+    assert [row.match_status for row in diff] == [MatchStatus.MATCH]
+
+
 def test_load_master_expected_subset_reads_xlsx_without_writing(tmp_path: Path) -> None:
     import openpyxl
 

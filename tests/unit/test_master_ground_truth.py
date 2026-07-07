@@ -16,6 +16,7 @@ import pytest
 from eidp.pdf.master_ground_truth import (
     canonical_field_category,
     department_key,
+    department_key_strict,
     fy_metric_columns,
     normalize_text,
 )
@@ -83,6 +84,31 @@ def test_department_key_drops_trailing_course_qualifier() -> None:
     )
     # コース is only dropped at the trailing edge / before a closing paren, never mid-name.
     assert department_key("公務員学科2年制") == "公務員学科2年制"
+
+
+def test_department_key_strict_keeps_bare_course_distinct_from_parent() -> None:
+    # The loose key folds a bare 'ビジネスコース' -> 'ビジネス' (its parent), which merges two
+    # DISTINCT granularities (a course track vs the 科 it sits under). The strict key MUST keep
+    # them apart so the review / double-check diff layer can refuse to certify the merge.
+    assert department_key("ビジネスコース") == department_key("ビジネス") == "ビジネス"
+    assert department_key_strict("ビジネスコース") == "ビジネスコース"
+    assert department_key_strict("ビジネス") == "ビジネス"
+    assert department_key_strict("ビジネスコース") != department_key_strict("ビジネス")
+
+
+def test_department_key_strict_preserves_identity_preserving_merges() -> None:
+    # The strict key must NOT flag legitimate master(学科-suffixed)/PDF(bare) spelling variants:
+    # NFKC, whitespace, the one trailing 学科/科 suffix, and the parenthesized (…コース) spec are
+    # all identity-preserving, so they must still collapse identically under the strict key.
+    assert department_key_strict("ビジネスキャリア２年制") == department_key_strict(
+        "ビジネスキャリア2年制学科"
+    )
+    assert department_key_strict("情報システム学科") == department_key_strict("情報システム")
+    assert department_key_strict("税理士・ビジネス学科(ビジネスコース)") == department_key_strict(
+        "税理士・ビジネス学科（ビジネス）"
+    )
+    # the suffix-only guard still applies under the strict key
+    assert department_key_strict("学科") == "学科"
 
 
 def test_fy_metric_columns_capacity_enrollment_intl_offsets() -> None:
