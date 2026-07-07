@@ -13,7 +13,12 @@ from collections import defaultdict
 from dataclasses import dataclass
 from enum import StrEnum
 
-from eidp.pdf.master_ground_truth import canonical_field_category, department_key, normalize_text
+from eidp.pdf.master_ground_truth import (
+    canonical_field_category,
+    department_key,
+    department_key_strict,
+    normalize_text,
+)
 from eidp.pipeline.external_extraction_import import ExternalExtractionRow, ExternalSourceSystem
 from eidp.pipeline.extraction_review import ReviewStatus, ReviewTaskType
 from eidp.pipeline.review_report import ReviewedExtractionRow
@@ -175,6 +180,23 @@ def compare_external_to_reviewed(
                     None,
                     DoubleCheckStatus.MISSING_IN_EXTERNAL,
                     "stable key absent from external extraction rows",
+                )
+            )
+            continue
+        if department_key_strict(maybe_reviewed_row.department_name or "") != department_key_strict(
+            maybe_external_row.department_name
+        ):
+            # The loose department_key joined these two rows, but the strict key (which never
+            # collapses a bare trailing コース) says they are DISTINCT granularities. A TRUE here
+            # would false-certify a course track against its parent 科, so mark it not-comparable
+            # (never Excel-ready) and surface the pair for human disambiguation instead.
+            results.append(
+                _result_row(
+                    maybe_reviewed_row,
+                    maybe_external_row,
+                    DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE,
+                    "department granularity collision: loose 学科 key merged distinct コース-level "
+                    "names (strict keys differ); not comparable",
                 )
             )
             continue

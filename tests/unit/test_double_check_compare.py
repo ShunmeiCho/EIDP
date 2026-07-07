@@ -158,6 +158,32 @@ def test_duplicate_external_keys_are_not_comparable() -> None:
     assert result[0].mismatch_reason == "duplicate external rows=2"
 
 
+def test_cross_side_course_granularity_collision_is_not_certified_true() -> None:
+    # reviewed 'ビジネスコース' (course track) vs external 'ビジネス' (parent 科) collapse to the same
+    # loose key. With equal values the double-check previously returned MATCH/TRUE -- a false
+    # certification of two distinct granularities. The strict-key guard MUST make it
+    # AMBIGUOUS_KEY_NOT_COMPARABLE: never TRUE, never Excel-ready.
+    result = compare_external_to_reviewed(
+        _reviewed(_record(ReviewStatus.ACCEPTED, department_name="ビジネスコース", extracted_value=100)),
+        [_external(department_name="ビジネス", value=100)],
+    )
+    assert [row.comparison_status for row in result] == [DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE]
+    assert result[0].comparison_result == ""
+    assert result[0].excel_ready is False
+    assert "granularity collision" in result[0].mismatch_reason
+
+
+def test_identity_preserving_suffix_variant_double_check_stays_true() -> None:
+    # The guard must not over-flag the designed suffix variation: external '会計学科' vs reviewed
+    # '会計' (bare) share the strict key, so equal values stay a clean TRUE match.
+    result = compare_external_to_reviewed(
+        _reviewed(_record(ReviewStatus.ACCEPTED, department_name="会計", extracted_value=55)),
+        [_external(department_name="会計学科", value=55)],
+    )
+    assert [row.comparison_status for row in result] == [DoubleCheckStatus.MATCH]
+    assert result[0].comparison_result == "TRUE"
+
+
 def test_needs_review_and_excluded_rows_are_not_comparable() -> None:
     result = compare_external_to_reviewed(
         _reviewed(

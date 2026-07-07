@@ -16,6 +16,7 @@ from pathlib import Path
 from eidp.pdf.master_ground_truth import (
     canonical_field_category,
     department_key,
+    department_key_strict,
     fy_metric_columns,
     normalize_text,
 )
@@ -233,6 +234,23 @@ def diff_reviewed_against_master(
         if expected is None:
             results.append(
                 _diff_row(reviewed_row, None, MatchStatus.MISSING_IN_MASTER, "stable key absent from master subset")
+            )
+            continue
+        if department_key_strict(reviewed_row.department_name or "") != department_key_strict(
+            expected.department_name
+        ):
+            # The loose department_key joined these two rows, but the strict key (which never
+            # collapses a bare trailing コース) says they are DISTINCT granularities. Certifying a
+            # match here would false-merge a course track with its parent 科, so refuse it and
+            # surface the pair for human disambiguation instead.
+            results.append(
+                _diff_row(
+                    reviewed_row,
+                    expected,
+                    MatchStatus.AMBIGUOUS_KEY,
+                    "department granularity collision: loose 学科 key merged distinct コース-level "
+                    "names (strict keys differ); not comparable",
+                )
             )
             continue
         if _values_equal(reviewed_row.final_review_value, expected.expected_value):
