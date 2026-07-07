@@ -13,11 +13,12 @@ from collections import defaultdict
 from dataclasses import dataclass
 from enum import StrEnum
 
-from eidp.pdf.master_ground_truth import (
-    canonical_field_category,
-    department_key,
-    department_key_strict,
-    normalize_text,
+from eidp.pipeline.department_join import (
+    COURSE_GRANULARITY_COLLISION_REASON,
+    is_course_granularity_collision,
+    join_key_label,
+    make_join_key,
+    values_equal,
 )
 from eidp.pipeline.external_extraction_import import ExternalExtractionRow, ExternalSourceSystem
 from eidp.pipeline.extraction_review import ReviewStatus, ReviewTaskType
@@ -183,8 +184,8 @@ def compare_external_to_reviewed(
                 )
             )
             continue
-        if department_key_strict(maybe_reviewed_row.department_name or "") != department_key_strict(
-            maybe_external_row.department_name
+        if is_course_granularity_collision(
+            maybe_reviewed_row.department_name, maybe_external_row.department_name
         ):
             # The loose department_key joined these two rows, but the strict key (which never
             # collapses a bare trailing コース) says they are DISTINCT granularities. A TRUE here
@@ -195,12 +196,11 @@ def compare_external_to_reviewed(
                     maybe_reviewed_row,
                     maybe_external_row,
                     DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE,
-                    "department granularity collision: loose 学科 key merged distinct コース-level "
-                    "names (strict keys differ); not comparable",
+                    COURSE_GRANULARITY_COLLISION_REASON,
                 )
             )
             continue
-        if _values_equal(maybe_reviewed_row.final_review_value, maybe_external_row.value):
+        if values_equal(maybe_reviewed_row.final_review_value, maybe_external_row.value):
             results.append(
                 _result_row(
                     maybe_reviewed_row,
@@ -238,7 +238,7 @@ def double_check_report_csv(rows: list[DoubleCheckResultRow]) -> str:
 
 
 def _reviewed_key(row: ReviewedExtractionRow) -> _DoubleCheckKey:
-    return _make_key(
+    return make_join_key(
         row.school_name,
         row.field_category,
         row.department_name or "",
@@ -248,43 +248,7 @@ def _reviewed_key(row: ReviewedExtractionRow) -> _DoubleCheckKey:
 
 
 def _external_key(row: ExternalExtractionRow) -> _DoubleCheckKey:
-    return _make_key(row.school_name, row.field_category, row.department_name, row.fiscal_year, row.metric)
-
-
-def _make_key(
-    school_name: str,
-    field_category: str | None,
-    department_name: str,
-    fiscal_year: int,
-    metric: str,
-) -> _DoubleCheckKey:
-    return (
-        normalize_text(school_name),
-        canonical_field_category(field_category),
-        department_key(department_name),
-        fiscal_year,
-        normalize_text(metric),
-    )
-
-
-def _key_label(key: _DoubleCheckKey) -> str:
-    return f"{key[0]}|{key[1]}|{key[2]}|{key[3]}|{key[4]}"
-
-
-def _values_equal(left: object, right: object) -> bool:
-    return _comparable_value(left) == _comparable_value(right)
-
-
-def _comparable_value(value: object) -> object:
-    if value is None:
-        return None
-    text = str(value).strip().replace(",", "")
-    if text in {"", "-", "‐", "―"}:
-        return None
-    try:
-        return int(float(text))
-    except ValueError:
-        return normalize_text(str(value))
+    return make_join_key(row.school_name, row.field_category, row.department_name, row.fiscal_year, row.metric)
 
 
 def _result_row(
@@ -295,7 +259,7 @@ def _result_row(
 ) -> DoubleCheckResultRow:
     key = _reviewed_key(reviewed_row)
     return DoubleCheckResultRow(
-        key=_key_label(key),
+        key=join_key_label(key),
         school_name=reviewed_row.school_name,
         school_id=reviewed_row.school_id,
         fiscal_year=reviewed_row.fiscal_year,
@@ -337,7 +301,7 @@ def _external_only_row(
 ) -> DoubleCheckResultRow:
     key = _external_key(external_row)
     return DoubleCheckResultRow(
-        key=_key_label(key),
+        key=join_key_label(key),
         school_name=external_row.school_name,
         school_id=external_row.school_id,
         fiscal_year=external_row.fiscal_year,

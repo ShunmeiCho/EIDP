@@ -13,12 +13,13 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
-from eidp.pdf.master_ground_truth import (
-    canonical_field_category,
-    department_key,
-    department_key_strict,
-    fy_metric_columns,
-    normalize_text,
+from eidp.pdf.master_ground_truth import fy_metric_columns, normalize_text
+from eidp.pipeline.department_join import (
+    COURSE_GRANULARITY_COLLISION_REASON,
+    is_course_granularity_collision,
+    join_key_label,
+    make_join_key,
+    values_equal,
 )
 from eidp.pipeline.extraction_review import ReviewStatus
 from eidp.pipeline.review_report import ReviewedExtractionRow
@@ -236,9 +237,7 @@ def diff_reviewed_against_master(
                 _diff_row(reviewed_row, None, MatchStatus.MISSING_IN_MASTER, "stable key absent from master subset")
             )
             continue
-        if department_key_strict(reviewed_row.department_name or "") != department_key_strict(
-            expected.department_name
-        ):
+        if is_course_granularity_collision(reviewed_row.department_name, expected.department_name):
             # The loose department_key joined these two rows, but the strict key (which never
             # collapses a bare trailing コース) says they are DISTINCT granularities. Certifying a
             # match here would false-merge a course track with its parent 科, so refuse it and
@@ -248,12 +247,11 @@ def diff_reviewed_against_master(
                     reviewed_row,
                     expected,
                     MatchStatus.AMBIGUOUS_KEY,
-                    "department granularity collision: loose 学科 key merged distinct コース-level "
-                    "names (strict keys differ); not comparable",
+                    COURSE_GRANULARITY_COLLISION_REASON,
                 )
             )
             continue
-        if _values_equal(reviewed_row.final_review_value, expected.expected_value):
+        if values_equal(reviewed_row.final_review_value, expected.expected_value):
             results.append(_diff_row(reviewed_row, expected, MatchStatus.MATCH, "reviewed value matches master"))
             continue
         results.append(
@@ -279,7 +277,7 @@ def diff_report_csv(rows: list[DiffResultRow]) -> str:
 
 
 def _reviewed_key(row: ReviewedExtractionRow) -> _DiffKey:
-    return _make_key(
+    return make_join_key(
         row.school_name,
         row.field_category,
         row.department_name or "",
@@ -289,43 +287,7 @@ def _reviewed_key(row: ReviewedExtractionRow) -> _DiffKey:
 
 
 def _expected_key(row: MasterExpectedRow) -> _DiffKey:
-    return _make_key(row.school_name, row.field_category, row.department_name, row.fiscal_year, row.metric)
-
-
-def _make_key(
-    school_name: str,
-    field_category: str | None,
-    department_name: str,
-    fiscal_year: int,
-    metric: str,
-) -> _DiffKey:
-    return (
-        normalize_text(school_name),
-        canonical_field_category(field_category),
-        department_key(department_name),
-        fiscal_year,
-        normalize_text(metric),
-    )
-
-
-def _key_label(key: _DiffKey) -> str:
-    return f"{key[0]}|{key[1]}|{key[2]}|{key[3]}|{key[4]}"
-
-
-def _values_equal(left: object, right: object) -> bool:
-    return _comparable_value(left) == _comparable_value(right)
-
-
-def _comparable_value(value: object) -> object:
-    if value is None:
-        return None
-    text = str(value).strip().replace(",", "")
-    if text in {"", "-", "‐", "―"}:
-        return None
-    try:
-        return int(float(text))
-    except ValueError:
-        return normalize_text(str(value))
+    return make_join_key(row.school_name, row.field_category, row.department_name, row.fiscal_year, row.metric)
 
 
 def _diff_row(
@@ -336,7 +298,7 @@ def _diff_row(
 ) -> DiffResultRow:
     key = _reviewed_key(row)
     return DiffResultRow(
-        key=_key_label(key),
+        key=join_key_label(key),
         school_name=row.school_name,
         school_id=row.school_id,
         fiscal_year=row.fiscal_year,
@@ -376,7 +338,7 @@ def _missing_extraction_row(
 ) -> DiffResultRow:
     key = _expected_key(expected)
     return DiffResultRow(
-        key=_key_label(key),
+        key=join_key_label(key),
         school_name=expected.school_name,
         school_id=expected.school_id,
         fiscal_year=expected.fiscal_year,
