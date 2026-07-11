@@ -9,7 +9,8 @@ def test_linux_web_is_the_only_v1_product_definition() -> None:
     adr = _text("docs/decisions/ADR-2026-07-linux-web-pivot.md")
     rules = _text("CLAUDE.md")
 
-    assert "Status: **Accepted**" in adr
+    assert "Status: **Accepted for implementation by project directive; PI ratification pending**" in adr
+    assert "does not satisfy release sign-off" in adr
     assert "Windows single-machine runtime" in adr
     assert "retired from `main`" in adr
     assert "Single mainline: `main`" in rules

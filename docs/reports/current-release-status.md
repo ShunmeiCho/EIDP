@@ -26,7 +26,9 @@ Release Forecast: `NOT_READY`
   recorded in `pyproject.toml`.
 - high-severity Bandit across `src/eidp` and all `scripts`: passed.
 - `uv run mypy src`: passed for 129 source files.
-- full pytest with coverage: 1728 passed, 8 skipped; 81.42% coverage.
+- full pytest with coverage: 1730 passed, 8 skipped; 82.01% coverage.
+- Streamlit PDF-intake AppTest covers traversal-safe filename storage and the
+  operator-visible `LockBusyError` path.
 - tracked real-PDF Linux/Web E2E: exact 28 departments, 84 metric rows, and 3
   independent parenthesized course siblings.
 - local Streamlit loopback health: `127.0.0.1` returned `ok`.

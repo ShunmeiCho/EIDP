@@ -1,9 +1,11 @@
 # ADR-2026-07: Linux/Web is the EIDP v1 product
 
-- Status: **Accepted**
+- Status: **Accepted for implementation by project directive; PI ratification pending**
 - Decision date: 2026-07-11
 - Implementation branch: `main`
 - Release forecast: `NOT_READY` until the served-app gates pass
+- Authority: no separate PI/owner signature artifact is recorded; this status
+  does not satisfy release sign-off.
 
 ## Decision
 
@@ -58,9 +60,10 @@ exceeds the current Streamlit/SQLite contract.
 
 ## Release consequences
 
-Accepting the product direction does not declare the service ready. Release
-still requires fresh quality results, Venus venv/start/restart proof, real LAN
-browser upload/review/download evidence, image/OCR-lane policy evidence, and
+Accepting the product direction for implementation neither records PI
+ratification nor declares the service ready. Release still requires fresh
+quality results, Venus venv/start/restart proof, real LAN browser
+upload/review/download evidence, image/OCR-lane policy evidence, and
 backup/restore proof defined in `docs/governance/release-gates.md`.
 
 ## Superseded documents
