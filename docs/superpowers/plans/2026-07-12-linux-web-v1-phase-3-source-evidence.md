@@ -16,9 +16,11 @@
 - Existing blobs are never replaced. Incoming inconsistency is quarantined; canonical evidence is marked suspect and extraction stops.
 - Same-school/same-hash reuses one `Document`; cross-school claim is append-only review evidence and never silently reassigns ownership.
 - Same school/source URL may produce new bytes over time. Remove URL uniqueness and keep a non-unique lookup index.
+- Fiscal-year corrections preserve the existing revision/demotion contract: create a new revision, demote the prior `is_current` row, and audit collateral demotion; never replace these tables with in-place updates.
 - Current `DepartmentYearly`, `SchoolYearStatus`, and `SupportRecipient` references always block cleanup.
 - Retention anchor begins when the last live reference closes; reactivation clears it. Default is 365 days.
 - Cleanup requires global lock, fresh revalidation, explicit manifest confirmation, finalized backup and verified off-host receipt.
+- Cleanup is limited to verified source-PDF/CAS and tracked legacy-copy items. Never delete `data/eidp.sqlite3`, `data/audit/manual-actions.jsonl`, or `data/master.xlsx`.
 
 Before Task 1:
 
@@ -584,7 +586,7 @@ git add src/eidp/pipeline/legacy_source_migration.py src/eidp/pipeline/document_
 git commit -m "refactor: remove legacy PDF storage bypasses" -m "Goals: G2, G4, G9, G10"
 ```
 
-After an adversarial review confirms no alternative overwrite/delete path remains and explicit external-write authorization is given:
+After an adversarial review confirms no alternative overwrite/delete path remains and explicit authorization is given for both the remote branch push and GitHub PR creation:
 
 ```bash
 git push -u origin feat/linux-web-v1-phase3-source-evidence

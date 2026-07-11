@@ -522,7 +522,7 @@ git commit -m "docs: record local runtime recovery evidence" -m "Goals: G5, G9, 
 
 - [ ] **Step 4: Publish, observe checks, and merge only with authorization**
 
-After explicit external-write authorization:
+After explicit authorization for both the remote branch push and GitHub PR creation:
 
 ```bash
 git push -u origin feat/linux-web-v1-phase1-runtime-recovery

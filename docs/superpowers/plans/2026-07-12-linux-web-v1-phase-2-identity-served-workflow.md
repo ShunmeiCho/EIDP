@@ -502,7 +502,7 @@ git add .github/workflows/ci.yml tests/unit/test_ci_workflow_contract.py tests/i
 git commit -m "test: gate the served review workflow" -m "Goals: G1, G2, G6, G10, G11, G13"
 ```
 
-After explicit external-write authorization:
+After explicit authorization for both the remote branch push and GitHub PR creation:
 
 ```bash
 git push -u origin feat/linux-web-v1-phase2-served-audit

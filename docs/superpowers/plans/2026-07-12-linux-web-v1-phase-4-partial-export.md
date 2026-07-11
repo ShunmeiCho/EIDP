@@ -18,6 +18,8 @@
 - Manifest schema ID is exactly `eidp.export-manifest.v1` and bundle path is `output/exports/{export_id}`.
 - Audit-pending rows are withheld. A staged bundle is not downloadable or business-usable.
 - `data/master.xlsx` is read-only.
+- Fiscal-year source rows remain append-only revisions with prior-row demotion; export assembly must never convert them to in-place updates.
+- Export writes only below `output/exports/` and its evidence projection root. Never delete `data/eidp.sqlite3`, `data/audit/manual-actions.jsonl`, or `data/master.xlsx`.
 
 Before Task 1:
 
@@ -467,7 +469,7 @@ git add tests/integration .github/workflows/ci.yml tests/unit/test_ci_workflow_c
 git commit -m "test: gate the served export workflow" -m "Goals: G1, G2, G3, G6, G10, G15"
 ```
 
-After explicit external-write authorization:
+After explicit authorization for both the remote branch push and GitHub PR creation:
 
 ```bash
 git push -u origin feat/linux-web-v1-phase4-partial-export

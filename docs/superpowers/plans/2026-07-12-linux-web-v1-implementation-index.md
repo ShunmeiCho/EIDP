@@ -18,6 +18,7 @@
 - Do not SSH to initialize Venus before Phases 0–4 are merged and green.
 - Do not write outside `/home/junming/EIDP` on Venus.
 - Preserve `data/master.xlsx` read-only, append-only business/audit revisions, global write lock and no-secret logging.
+- Never delete the red-line facts of record: `data/eidp.sqlite3`, `data/audit/manual-actions.jsonl`, or `data/master.xlsx`.
 
 ## Ordered Plan Suite
 

@@ -16,6 +16,8 @@
 - Keep Windows retired; do not restore Windows packaging or Stage 6 assets to make CI green.
 - `main` is the sole product definition; `pr/linux-web-v1-mainline-20260712` is transport-only and deleted after merge.
 - Any CI failure stops merge. Diagnose from the real run; do not assume or pre-emptively edit unrelated code.
+- The consolidated local history has never run as a GitHub PR. Local gates reduce risk but do not predict that the first real `Ship gate contract` run will pass.
+- Never delete `data/eidp.sqlite3`, `data/audit/manual-actions.jsonl`, or `data/master.xlsx` while reproducing CI.
 
 ---
 
@@ -26,6 +28,8 @@
 - Verify: `uv.lock`
 - Verify: `tests/unit/test_linux_web_release_contract.py`
 - Verify: `tests/unit/test_ci_workflow_contract.py`
+- Verify: `src/eidp/web/app.py`
+- Verify: `deploy/linux/run_web.sh`
 
 **Interfaces:**
 - Consumes: local `main` containing the approved design and plan documents
@@ -68,15 +72,64 @@ uv run pytest --cov=src/eidp --cov-report=term --cov-fail-under=80
 
 Expected: every command exits 0 and coverage is at least 80%.
 
-- [ ] **Step 4: Reproduce `Ship gate contract`**
+- [ ] **Step 4: Reproduce every `Ship gate contract` step**
 
-Run:
+Run the served-app contract tests:
+
 
 ```bash
 uv run pytest tests/unit/test_linux_web_release_contract.py tests/unit/test_web_write_lock_contract.py tests/unit/test_app_root_paths.py tests/integration/test_linux_web_e2e_chain.py -q
 ```
 
-Expected: exit 0 with the exact Linux/Web integration assertions passing.
+Create one isolated archive of the clean HEAD and attach the already synchronized local environment:
+
+```bash
+SMOKE_ROOT=$(mktemp -d "$PWD/.cache/phase0-ship-smoke.XXXXXX")
+git archive HEAD | tar -x -C "$SMOKE_ROOT"
+ln -s "$PWD/.venv" "$SMOKE_ROOT/.venv"
+```
+
+Run the Web entry-point import smoke from that clean archive, isolated from local `.env` and live data:
+
+```bash
+(
+  cd "$SMOKE_ROOT"
+  EIDP_APP_ROOT="$SMOKE_ROOT" \
+  EIDP_DATA_DIR="$SMOKE_ROOT/data" \
+  UV_PROJECT_ENVIRONMENT="$SMOKE_ROOT/.venv" \
+  UV_CACHE_DIR="$SMOKE_ROOT/.cache/uv" \
+  UV_PYTHON_INSTALL_DIR="$SMOKE_ROOT/.cache/uv/python" \
+  PYTHONPATH="$SMOKE_ROOT/src" \
+  uv run --frozen --no-sync --no-env-file python -c "import os; from pathlib import Path; import eidp; from eidp.web.app import main; assert Path(eidp.__file__).resolve().is_relative_to((Path(os.environ['EIDP_APP_ROOT']) / 'src').resolve()); assert callable(main)"
+)
+```
+
+Run the actual launcher/loopback health smoke from the same archive so `project_env.sh` cannot point at live red-line data:
+
+```bash
+"$SMOKE_ROOT/.venv/bin/python" -c "import socket; sock = socket.socket(); sock.bind(('127.0.0.1', 8502)); sock.close()"
+(
+  cd "$SMOKE_ROOT"
+  PYTHONPATH="$SMOKE_ROOT/src" deploy/linux/run_web.sh >"$SMOKE_ROOT/streamlit.log" 2>&1 &
+  app_pid=$!
+  trap 'kill "$app_pid" 2>/dev/null || true; wait "$app_pid" 2>/dev/null || true' EXIT
+  for _attempt in {1..30}; do
+    if ! kill -0 "$app_pid" 2>/dev/null; then
+      tail -n 100 "$SMOKE_ROOT/streamlit.log"
+      exit 1
+    fi
+    if curl --fail --silent --show-error http://127.0.0.1:8502/_stcore/health; then
+      kill -0 "$app_pid"
+      exit 0
+    fi
+    sleep 1
+  done
+  tail -n 100 "$SMOKE_ROOT/streamlit.log"
+  exit 1
+)
+```
+
+Expected: all three workflow steps exit 0. The archive uses the committed source plus the already locked local `.venv`; `--no-sync --no-env-file` prevents editable reinstall or local `.env` leakage, and the import assertion proves code came from the archive. All runtime data/caches/logs remain below the ignored archive root, and none of the three red-line files is opened for write. If a restricted agent sandbox rejects the loopback bind with `EPERM`, rerun this same local-only smoke with approved loopback permission; do not misclassify that sandbox denial as an occupied port or application failure.
 
 - [ ] **Step 5: Verify no local artifact changed the tree**
 
@@ -124,7 +177,7 @@ Expected: remote main still equals the freshly fetched tracking SHA, then a new 
 
 - [ ] **Step 3: Open the protected-main PR**
 
-Run:
+Obtain explicit authorization to create the GitHub PR; push authorization alone does not authorize this visible external action. Then run:
 
 ```bash
 gh pr create --base main --head pr/linux-web-v1-mainline-20260712 --title "feat: consolidate Linux/Web v1 mainline" --body $'Summary:\n- retire the Windows product baseline\n- publish the Streamlit/SQLite Linux-Web integration and extraction core\n- add the approved Venus deployment, proxy, and acceptance specification\n\nVerification:\n- uv run ruff check .\n- uv run --with bandit bandit -q --severity-level high -r src/eidp scripts\n- uv run mypy src\n- uv run pytest --cov=src/eidp --cov-report=term --cov-fail-under=80\n- Linux/Web ship-gate contract suite\n\nRelease status remains NOT_READY; this PR does not deploy Venus.\n\nGoals: G1, G2, G4, G6, G9, G13, G14, G15'
