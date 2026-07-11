@@ -5,23 +5,24 @@ the current release path. It is a release train, not a loose backlog.
 
 ## v1.0 GA
 
-Goal: release a vocational-school-first Windows single-operator tool.
+Goal: release a vocational-school-first Linux/Web service on Venus.
 
 Must satisfy:
 
-- Windows setup, start, weekly run, and diagnose are validated.
-- PDF discovery runs from official sources and official disclosure entries.
+- `/home/junming/EIDP` setup, virtual environment, start, and diagnostics are validated.
+- Business users can reach the served app over the approved intranet path.
+- Correct-PDF intake and optional official-source discovery are auditable.
 - dangerous fiscal-year interactions are blocked.
 - PDF/OCR/manual-entry chain is usable.
 - Excel-ready gate is active.
 - audit log covers key manual actions.
-- release evidence bundle exists.
-- owner/operator sign-off is complete.
+- SQLite single-writer and backup/restore contracts are verified.
+- served-app evidence bundle and owner/operator sign-off are complete.
 
 Not included:
 
 - university production workflow
-- multi-operator support
+- real-time multi-operator editing and role-based permissions
 - PostgreSQL
 - React production UI
 - complete school-detail evidence-chain product
@@ -37,9 +38,9 @@ Allowed work:
 - blocker bug fixes
 - UI wording drift
 - diagnostics improvements
-- Windows path issues
+- Linux deployment-root or virtual-environment issues
 - Excel file-lock messages
-- OCR add-on detection issues
+- OCR runtime detection issues
 - log readability
 - stale PPTX/HTML/reference cleanup
 

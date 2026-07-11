@@ -59,14 +59,14 @@ def test_runtime_ocr_settings_can_be_pinned_by_env(monkeypatch) -> None:
     monkeypatch.setenv("EIDP_OCR_AUTO_ENABLE", "off")
     monkeypatch.setenv("EIDP_OCR_MIN_CPUS", "4")
     monkeypatch.setenv("EIDP_OCR_MIN_FREE_RAM_MB", "8192")
-    monkeypatch.setenv("EIDP_TESSERACT_BIN", "C:/EIDP/tesseract.exe")
+    monkeypatch.setenv("EIDP_TESSERACT_BIN", "/home/junming/EIDP/ocr/tesseract/bin/tesseract")
 
     settings = Settings(_env_file=None)
 
     assert settings.ocr_auto_enable == "off"
     assert settings.ocr_min_cpus == 4
     assert settings.ocr_min_free_ram_mb == 8192
-    assert settings.tesseract_bin == "C:/EIDP/tesseract.exe"
+    assert settings.tesseract_bin == "/home/junming/EIDP/ocr/tesseract/bin/tesseract"
 
 
 def test_runtime_url_search_settings_can_be_pinned_by_env(monkeypatch) -> None:
@@ -96,21 +96,22 @@ def test_default_database_url_follows_data_dir_env(monkeypatch, tmp_path: Path) 
     assert settings.database_url == f"sqlite:///{(data_dir / 'eidp.sqlite3').as_posix()}"
 
 
-def test_env_example_lets_database_url_follow_data_dir() -> None:
+def test_env_example_uses_venus_project_paths() -> None:
     body = Path(".env.example").read_text(encoding="utf-8")
     active_lines = [
         line.strip() for line in body.splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     ]
 
-    assert not any(line.startswith("EIDP_DATABASE_URL=") for line in active_lines)
-    assert "EIDP_DATA_DIR=C:/EIDP/data" in body
-    assert "# EIDP_TARGET_FISCAL_YEAR=2026" in body
+    assert "EIDP_APP_ROOT=/home/junming/EIDP" in active_lines
+    assert "EIDP_DATA_DIR=/home/junming/EIDP/data" in active_lines
+    assert "EIDP_DATABASE_URL=sqlite:////home/junming/EIDP/data/eidp.sqlite3" in active_lines
+    assert "EIDP_TARGET_FISCAL_YEAR" not in body
     assert "EIDP_FISCAL_ERA_NAME=令和" in body
     assert "EIDP_OCR_AUTO_ENABLE=auto" in body
     assert "EIDP_URL_SEARCH_AUTO_ENABLE=auto" in body
     assert "EIDP_URL_SEARCH_BATCH_SIZE=200" in body
-    assert "# EIDP_EXTERNAL_SEARCH_COMMAND=python scripts/external_search_wrapper.py" in body
+    assert "# EIDP_EXTERNAL_SEARCH_COMMAND=/home/junming/EIDP/tools/search-wrapper" in body
     assert "${APP_ROOT}" not in body
     assert not any(line.startswith("EIDP_DATABASE_URL=postgresql") for line in active_lines), (
         "operator .env example must not default to the old Venus/Postgres URL"

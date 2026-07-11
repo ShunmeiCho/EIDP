@@ -18,11 +18,11 @@ pattern discovery and regression evaluation, not replacing the official-index
 chain. The ingest layer already follows this shape through `data/gold-set/` and
 the PDF evaluation harness; the discovery layer now has the matching
 `data/discovery-gold-set/` surface and should use it to evaluate proposed
-crawler/agent behavior before broad Windows yield runs.
+crawler/agent behavior before bounded acquisition-health runs.
 
 ## Current Evidence
 
-Windows v136 samples show the split clearly:
+Historical v136 samples show the split clearly:
 
 - Saitama 5-school URL crawl: 5/5 auto-registered, strict FY2026 PDF downloads
   0, FY2025 control downloads 4.
@@ -152,7 +152,8 @@ generators plus body/evidence validation, not treat URL templates as truth:
 - pre-filter adjacent disclosure PDFs before download,
 - emit reviewable evidence for operator UI.
 
-Phase 4 should evaluate discovery against the gold set before Windows release.
+Phase 4 should evaluate discovery against the gold set before changing the
+support-only acquisition path.
 The bounded run inputs are emitted by `uv run eidp discovery-gold-run-plan
 --json`; this keeps the next test run scoped to the committed demonstrations
 instead of ad hoc broad crawling.
@@ -165,7 +166,7 @@ discovery_gold_set --evidence-log _temp/discovery-gold-evidence.jsonl`.
 The local comparison surface is `uv run eidp eval-discovery-gold --predictions
 path/to/predictions.jsonl --json`; crawler or agent output must match gold-set
 entry IDs, outcomes, PDF URLs, fiscal years, and strict target-year decisions
-before a Windows yield run is treated as meaningful. Existing `discover-pdfs`
+before a bounded yield run is treated as meaningful. Existing `discover-pdfs`
 evidence JSONL can also be evaluated with `--pdf-evidence`, which maps
 `accepted_downloaded`, `fiscal_year_mismatch:*`,
 `target_fiscal_year_not_detected`, and `no_candidates_found` into the gold-set
@@ -197,7 +198,7 @@ This means the immediate Saitama bottleneck is not official-index URL ingress.
 The dominant bucket is latest-public or old-year target PDFs, while strict
 FY2026 correctly downloads 0.
 
-Phase 5 should run the bounded Windows yield gate again and compare:
+Phase 5 should run the bounded acquisition-health check again and compare:
 
 - true target-FY acquisition rate,
 - stale latest-public rate,
@@ -211,9 +212,9 @@ PDF manually: the URL, the path used to find it, and the result label. A bare
 ## Non-Goals
 
 - Do not loosen strict FY2026 mode to count FY2025 forms as success.
-- Do not require the Windows operator to use Codex or Claude Code directly.
+- Do not require business users to use Codex or Claude Code directly.
 - Do not run nationwide SERP crawling from the agent harness.
 
 Codex/Claude is a development-side tool for turning manual discovery into a
-gold set and then into code. The Windows operator experience should remain ZIP
-extraction, setup, browser UI, and optional API-key configuration.
+gold set and then into code. Business users should remain inside the browser
+workflow; developer tools are not production dependencies.

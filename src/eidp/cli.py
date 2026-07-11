@@ -19,7 +19,7 @@ from eidp.logging_config import configure_logging
 
 
 def _configure_utf8_stdio(stdout: Any = sys.stdout, stderr: Any = sys.stderr) -> None:
-    """Keep Windows console code pages from crashing Japanese CLI logs."""
+    """Keep redirected CLI logs consistently encoded as UTF-8."""
 
     for stream in (stdout, stderr):
         reconfigure = getattr(stream, "reconfigure", None)
@@ -419,11 +419,11 @@ def ingest_pdfs(
 
 @app.command()
 def db_bootstrap(
-    sqlite: bool = typer.Option(False, "--sqlite", help="Bootstrap a fresh SQLite database (Windows path)."),
+    sqlite: bool = typer.Option(False, "--sqlite", help="Bootstrap a fresh SQLite database."),
 ) -> None:
     """Bootstrap a database without running PG-only alembic migrations.
 
-    For SQLite (Windows business-user deployment) this builds the schema via
+    For SQLite (Linux/Web single-writer deployment) this builds the schema via
     ORM metadata + adds the null-safe department index + applies PRAGMAs +
     stamps alembic head. Idempotent and safe to re-run.
     """

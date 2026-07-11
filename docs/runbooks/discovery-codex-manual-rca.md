@@ -176,7 +176,7 @@ Minimum useful content:
   FY success.
 - `automation_pattern.reusable_rules`: the rule that should survive into code.
 - `automation_pattern.anti_patterns`: what the crawler must not infer.
-- `evidence.source_paths`: local or Windows evidence logs used for the
+- `evidence.source_paths`: local or server evidence logs used for the
   decision.
 
 After adding entries, run:
@@ -279,7 +279,7 @@ The result should be a labeled evidence trail, not an open-ended web search.
 
 ## Single-School RCA Packet
 
-Use this packet when Windows SSH is unavailable or when a single failed school
+Use this packet when the server connection is unavailable or when a single failed school
 needs Codex-assisted manual investigation. The packet is intentionally
 school-scoped. It should never expand into a prefecture-wide or nationwide SERP
 run.
@@ -316,7 +316,7 @@ uv run eidp discovery-rca-batch-plan \
   --json
 ```
 
-The Windows initial bootstrap and weekly target-year runner write this batch
+The Linux initial bootstrap and weekly target-year runner write this batch
 automatically when PDF discovery evidence exists:
 
 ```text

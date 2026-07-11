@@ -22,8 +22,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from eidp.pdf.table_grid_extractor import extract_table_grid_records
 from eidp.pipeline.double_check_compare import DoubleCheckStatus, compare_external_to_reviewed
 from eidp.pipeline.external_extraction_import import ExternalExtractionRow, ExternalSourceSystem
@@ -46,7 +44,6 @@ from eidp.pipeline.review_master_diff import (
 from eidp.pipeline.review_report import ReviewedExtractionRow, reviewed_rows_from_records
 
 _SAMPLE = Path("data/sample-pdfs/nkz.pdf")
-_needs_sample = pytest.mark.skipif(not _SAMPLE.exists(), reason="needs data/sample-pdfs/nkz.pdf")
 
 _SCHOOL = "E2Eテスト電子専門学校"  # supplied at intake; the PDF gives departments, not the school
 _SCHOOL_ID = "S-E2E"
@@ -55,6 +52,9 @@ _FY = 2025
 
 def _run_chain_to_reviewed(tmp_path: Path) -> list[ReviewedExtractionRow]:
     """intake -> extract (REAL) -> accept every metric review -> reviewed rows."""
+    department_records = extract_table_grid_records(_SAMPLE)
+    assert len(department_records) == 28
+    assert sum(record.department_name.startswith("ゲーム4年制学科(") for record in department_records) == 3
     metadata = validate_intake_metadata(
         school_name=_SCHOOL,
         school_id=_SCHOOL_ID,
@@ -71,12 +71,12 @@ def _run_chain_to_reviewed(tmp_path: Path) -> list[ReviewedExtractionRow]:
     item = process_intake_record(
         intake_root=tmp_path,
         intake_record_id=record.record_id,
-        extractor_func=extract_table_grid_records,
+        extractor_func=lambda _path: department_records,
     )
     assert item.status == ExtractionStatus.EXTRACTION_COMPLETED
     extracted = load_extracted_rows(tmp_path, record.record_id)
-    assert extracted, "the real PDF must yield extracted metric rows"
-    assert item.rows_written == len(extracted)
+    assert len(extracted) == 84
+    assert item.rows_written == 84
     # No Excel is written anywhere along the extraction path.
     assert list(tmp_path.rglob("*.xlsx")) == []
 
@@ -86,6 +86,7 @@ def _run_chain_to_reviewed(tmp_path: Path) -> list[ReviewedExtractionRow]:
                 intake_root=tmp_path, review_id=review.review_id, reviewed_by="op-e2e"
             )
     reviewed = reviewed_rows_from_records(ensure_review_records(tmp_path))
+    assert len(reviewed) == 84
     assert all(row.school_name == _SCHOOL for row in reviewed)
     return reviewed
 
@@ -98,11 +99,10 @@ def _enrollment_rows(reviewed: list[ReviewedExtractionRow]) -> list[ReviewedExtr
     ]
 
 
-@_needs_sample
 def test_e2e_intake_extraction_review_carry_real_evidence(tmp_path: Path) -> None:
     reviewed = _run_chain_to_reviewed(tmp_path)
     enrollment = _enrollment_rows(reviewed)
-    assert len(enrollment) >= 2
+    assert len(enrollment) == 28
     # Every accepted enrollment row keeps its page/table/row/col provenance end to end.
     for row in enrollment:
         assert row.page_no is not None
@@ -115,7 +115,6 @@ def test_e2e_intake_extraction_review_carry_real_evidence(tmp_path: Path) -> Non
     )
 
 
-@_needs_sample
 def test_e2e_diff_and_double_check_hold_the_excel_ready_invariant(tmp_path: Path) -> None:
     reviewed = _run_chain_to_reviewed(tmp_path)
     enrollment = _enrollment_rows(reviewed)
@@ -148,7 +147,7 @@ def test_e2e_diff_and_double_check_hold_the_excel_ready_invariant(tmp_path: Path
         for row in enrollment
         if (row.department_name or "").startswith("ゲーム4年制学科(")
     ]
-    assert len(siblings) >= 2, "nkz carries multiple distinct game-course siblings"
+    assert len(siblings) == 3, "nkz carries exactly three distinct game-course siblings"
     external = [
         ExternalExtractionRow(
             school_name=_SCHOOL, school_id=_SCHOOL_ID, corporation_name="E2E",

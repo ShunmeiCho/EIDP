@@ -7,7 +7,8 @@ from pathlib import Path
 import streamlit as st
 
 from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
-from eidp.pipeline.extraction_queue import ensure_extraction_queue
+from eidp.db.locking import LockBusyError
+from eidp.pipeline.extraction_queue import ensure_extraction_queue, load_extraction_queue
 from eidp.pipeline.pdf_intake import (
     PdfIntakeMetadata,
     PdfIntakeValidationError,
@@ -18,6 +19,7 @@ from eidp.pipeline.pdf_intake import (
     validate_intake_metadata,
 )
 from eidp.web.components.intake_table import render_intake_table
+from eidp.web.locking import acquire_web_write_lock
 
 
 def render_pdf_intake_page(*, intake_root: Path | None = None) -> None:
@@ -56,9 +58,13 @@ def _render_pdf_upload(intake_root: Path) -> None:
             pdf_url=pdf_url,
             uploaded_filename=uploaded_file.name,
         )
-        record = store_pdf_upload(metadata=metadata, pdf_bytes=uploaded_file.getvalue(), intake_root=intake_root)
+        with acquire_web_write_lock(intake_root, owner="web_pdf_intake"):
+            record = store_pdf_upload(metadata=metadata, pdf_bytes=uploaded_file.getvalue(), intake_root=intake_root)
     except PdfIntakeValidationError as exc:
         _render_validation_errors(exc)
+        return
+    except LockBusyError as exc:
+        st.error(str(exc))
         return
     st.success(f"Registered {record.original_filename} as {record.lane.value}.")
 
@@ -81,9 +87,13 @@ def _render_zip_upload(intake_root: Path) -> None:
             source_page_url=source_page_url,
             uploaded_filename=uploaded_file.name,
         )
-        records = store_zip_upload(metadata=metadata, zip_bytes=uploaded_file.getvalue(), intake_root=intake_root)
+        with acquire_web_write_lock(intake_root, owner="web_zip_intake"):
+            records = store_zip_upload(metadata=metadata, zip_bytes=uploaded_file.getvalue(), intake_root=intake_root)
     except PdfIntakeValidationError as exc:
         _render_validation_errors(exc)
+        return
+    except LockBusyError as exc:
+        st.error(str(exc))
         return
     st.success(f"Registered {len(records)} PDF(s) from ZIP.")
 
@@ -102,16 +112,25 @@ def _render_url_csv_upload(intake_root: Path) -> None:
         st.error("URL CSV file is required.")
         return
     try:
-        records = register_url_csv(csv_bytes=uploaded_file.getvalue(), intake_root=intake_root)
+        with acquire_web_write_lock(intake_root, owner="web_url_intake"):
+            records = register_url_csv(csv_bytes=uploaded_file.getvalue(), intake_root=intake_root)
     except PdfIntakeValidationError as exc:
         _render_validation_errors(exc)
+        return
+    except LockBusyError as exc:
+        st.error(str(exc))
         return
     st.success(f"Registered {len(records)} URL intake row(s).")
 
 
 def _render_queue(intake_root: Path) -> None:
     records = load_intake_queue(intake_root)
-    extraction_items = ensure_extraction_queue(intake_root)
+    try:
+        with acquire_web_write_lock(intake_root, owner="web_extraction_queue_sync"):
+            extraction_items = ensure_extraction_queue(intake_root)
+    except LockBusyError as exc:
+        st.warning(str(exc))
+        extraction_items = load_extraction_queue(intake_root)
     text_count = sum(1 for record in records if record.lane.value == "text_pdf_main")
     exception_count = sum(1 for record in records if record.lane.value.startswith("exception_"))
     url_count = sum(1 for record in records if record.lane.value == "url_registered")

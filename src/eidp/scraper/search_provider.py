@@ -183,7 +183,7 @@ class SerperProvider(SearchProvider):
 
 
 def _external_command_args(command: str, *, query: str, count: int) -> list[str]:
-    args = shlex.split(command, posix=os.name != "nt")
+    args = shlex.split(command, posix=True)
     if not args:
         raise ValueError("EIDP_EXTERNAL_SEARCH_COMMAND required for external search provider")
     replacements = {

@@ -3,10 +3,9 @@
 Status: Future planning note
 Updated: 2026-05-05
 
-Sprint 8 v1.0 is scoped to one operator Windows PC and vocational schools. The
-items below are intentionally outside v1.0 so the Windows delivery can ship
-without absorbing university parsing, multi-user coordination, or cloud
-distribution risk.
+Linux/Web v1 is scoped to vocational schools and a controlled single-writer
+workflow. The items below stay outside v1 so the served application can ship
+without absorbing university parsing or high-concurrency platform risk.
 
 ## 1. Universities
 
@@ -30,7 +29,7 @@ v2 work:
 
 ## 2. PostgreSQL Return Option
 
-v1.0 uses SQLite because the final operator environment is one Windows PC.
+v1 uses SQLite because all writes are serialized by the application lock.
 
 PostgreSQL may return when:
 

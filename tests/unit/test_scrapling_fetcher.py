@@ -232,7 +232,7 @@ def test_scrapling_html_fetcher_rejects_static_mode_without_fake_html(monkeypatc
     assert html is None
 
 
-def test_load_scrapling_fetchers_raises_when_addon_missing(monkeypatch) -> None:
+def test_load_scrapling_fetchers_raises_when_extra_missing(monkeypatch) -> None:
     import eidp.scraper.scrapling_fetcher as module
 
     monkeypatch.setattr(module, "scrapling_available", lambda: False)
@@ -241,9 +241,9 @@ def test_load_scrapling_fetchers_raises_when_addon_missing(monkeypatch) -> None:
         _load_scrapling_fetchers()
 
 
-def test_ensure_playwright_browsers_path_uses_extracted_addon(monkeypatch, tmp_path) -> None:
+def test_ensure_playwright_browsers_path_uses_project_cache(monkeypatch, tmp_path) -> None:
     app_root = tmp_path / "EIDP"
-    browsers = app_root / "playwright-addon" / "ms-playwright"
+    browsers = app_root / ".cache" / "ms-playwright"
     browsers.mkdir(parents=True)
     monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
 
@@ -254,7 +254,7 @@ def test_ensure_playwright_browsers_path_uses_extracted_addon(monkeypatch, tmp_p
 
 def test_ensure_playwright_browsers_path_preserves_existing_env(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", "/already/configured")
-    browsers = tmp_path / "EIDP" / "playwright-addon" / "ms-playwright"
+    browsers = tmp_path / "EIDP" / ".cache" / "ms-playwright"
     browsers.mkdir(parents=True)
 
     _ensure_playwright_browsers_path(app_root=tmp_path / "EIDP")

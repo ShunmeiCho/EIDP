@@ -7,7 +7,7 @@ common synonyms to a single canonical metric, and returns ``None`` for
 teacher-staffing / non-target labels so they can never be misread as an enrollment
 or capacity number.
 
-Deployment-agnostic (no-regret): usable by both the current Windows pipeline and the
+Deployment-agnostic (no-regret): usable by both the current pipeline and the
 proposed Linux/Web extractor.
 """
 

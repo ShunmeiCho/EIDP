@@ -23,7 +23,7 @@ codebase.
 | Agent-Reach should not enter the production core. | Confirmed | Added `docs/tools/agent-reach-rca.md`; Agent-Reach is T4 external research assistance only. |
 | Agent-Reach can support developer/admin RCA. | Confirmed | It may produce candidate evidence, but must not write production business tables. |
 | Add tests for registered labels and trust policies. | Confirmed | Added domain taxonomy tests to keep new enum values from shipping without operator labels or next actions. |
-| Use local `UI-example/` as a UI blueprint. | Confirmed with boundary | It matches the operator workbench direction, but remains a design reference only; see `docs/reports/2026-06-19-ui-example-review.md`. |
+| Use the operations-console demo as a UI blueprint. | Confirmed with boundary | It remains a design reference only; see `docs/design/operations-console-demo/README.md`. |
 | Rename database tables now. | Deferred | Table rename belongs after vocabulary, adapters, UI copy, tests, and release evidence stabilize. |
 | Move modules into the proposed 9-layer package tree now. | Deferred | Large path moves would create avoidable regression risk on the release branch. Compatibility wrappers should come first. |
 

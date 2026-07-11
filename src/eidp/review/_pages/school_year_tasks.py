@@ -135,7 +135,6 @@ WEEKLY_DISCOVERY_METHODS = (
     "operator_manual",
     "scrapling_stealth",
 )
-WEEKLY_TASK_REGISTRATION_WARNING_FILE = Path("data") / "weekly-task-registration-warning.txt"
 TASK_SCOPE_STATE_KEY = "school_task_scope_filter"
 TASK_REASON_STATE_KEY = "school_task_reason_filter"
 TASK_PREFECTURE_STATE_KEY = "school_task_prefecture_filter"
@@ -1169,19 +1168,6 @@ def latest_weekly_progress(app_root: Path) -> BootstrapProgress | None:
     return read_bootstrap_progress(path)
 
 
-def weekly_task_registration_warning_path(app_root: Path) -> Path:
-    return app_root / WEEKLY_TASK_REGISTRATION_WARNING_FILE
-
-
-def read_weekly_task_registration_warning(app_root: Path) -> str | None:
-    path = weekly_task_registration_warning_path(app_root)
-    try:
-        body = path.read_text(encoding="utf-8").strip()
-    except OSError:
-        return None
-    return body or None
-
-
 def latest_weekly_last_run_path(app_root: Path) -> Path:
     return app_root / "data" / "output" / "last_run.json"
 
@@ -1338,7 +1324,7 @@ def start_initial_url_bootstrap(
     if not script.is_file():
         return BootstrapLaunchResult(
             started=False,
-            message="初回取得プログラムが見つかりません。ZIPをもう一度展開してください。",
+            message="初回取得プログラムが見つかりません。サーバー配置を確認してください。",
         )
 
     logs_dir = app_root / "logs"
@@ -1361,26 +1347,15 @@ def start_initial_url_bootstrap(
 
     try:
         with log_path.open("ab") as stream:
-            if sys.platform == "win32":  # pragma: no cover - covered by Windows VM E2E
-                proc = subprocess.Popen(  # noqa: S603 - command is built from bundled app paths only.
-                    cmd,
-                    cwd=app_root,
-                    env=env,
-                    stdin=subprocess.DEVNULL,
-                    stdout=stream,
-                    stderr=subprocess.STDOUT,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-                )
-            else:
-                proc = subprocess.Popen(  # noqa: S603 - command is built from bundled app paths only.
-                    cmd,
-                    cwd=app_root,
-                    env=env,
-                    stdin=subprocess.DEVNULL,
-                    stdout=stream,
-                    stderr=subprocess.STDOUT,
-                    start_new_session=True,
-                )
+            proc = subprocess.Popen(  # noqa: S603 - command is built from project paths only.
+                cmd,
+                cwd=app_root,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=stream,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
     except OSError as exc:
         message = f"初回取得を開始できませんでした: {exc}"
         _write_failed_bootstrap_progress(
@@ -1423,7 +1398,7 @@ def start_weekly_rediscovery(
     if not script.is_file():
         return BootstrapLaunchResult(
             started=False,
-            message="週次再取得プログラムが見つかりません。ZIPをもう一度展開してください。",
+            message="週次再取得プログラムが見つかりません。サーバー配置を確認してください。",
         )
 
     logs_dir = app_root / "logs"
@@ -1447,26 +1422,15 @@ def start_weekly_rediscovery(
 
     try:
         with log_path.open("ab") as stream:
-            if sys.platform == "win32":  # pragma: no cover - covered by Windows VM E2E
-                proc = subprocess.Popen(  # noqa: S603 - command is built from bundled app paths only.
-                    cmd,
-                    cwd=app_root,
-                    env=env,
-                    stdin=subprocess.DEVNULL,
-                    stdout=stream,
-                    stderr=subprocess.STDOUT,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-                )
-            else:
-                proc = subprocess.Popen(  # noqa: S603 - command is built from bundled app paths only.
-                    cmd,
-                    cwd=app_root,
-                    env=env,
-                    stdin=subprocess.DEVNULL,
-                    stdout=stream,
-                    stderr=subprocess.STDOUT,
-                    start_new_session=True,
-                )
+            proc = subprocess.Popen(  # noqa: S603 - command is built from project paths only.
+                cmd,
+                cwd=app_root,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=stream,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
     except OSError as exc:
         message = f"週次再取得を開始できませんでした: {exc}"
         _write_failed_weekly_progress(
@@ -1933,14 +1897,6 @@ def _render_weekly_rediscovery_controls(summary: SchoolTaskSummary, *, lock_path
         "登録済みの情報公開ページや学校ページを入口に、現在の対象年度PDFを再探索します。"
         "今年登録したページURLは来年度以降も入口として使われます。"
     )
-    task_warning = read_weekly_task_registration_warning(app_root)
-    if task_warning:
-        st.warning(
-            "Windows の自動週次タスクが登録できていません。"
-            "この画面の「週次URL/PDF再取得を開始」ボタンから手動で再取得できます。"
-            "毎週の自動実行が必要な場合は管理者に setup ログを共有してください。"
-        )
-        st.caption(f"Task Scheduler: {task_warning}")
     needs_bootstrap = needs_initial_url_bootstrap(summary)
     if needs_bootstrap:
         st.info("先に初回URL/PDF取得を実行してください。URL登録後に週次再取得を使えます。")

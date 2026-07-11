@@ -13,11 +13,11 @@ def test_extract_text_ocr_uses_tesseract_wrapper(monkeypatch, tmp_path: Path) ->
     pdf_path.write_bytes(b"%PDF-1.4 image")
     image_path = tmp_path / "page.png"
     image_path.write_bytes(b"png")
-    binary = tmp_path / "ocr-addon" / "tesseract" / "tesseract.exe"
-    tessdata = tmp_path / "ocr-addon" / "tessdata"
+    binary = tmp_path / "ocr" / "tesseract" / "bin" / "tesseract"
+    tessdata = tmp_path / "ocr" / "tessdata"
     binary.parent.mkdir(parents=True)
     tessdata.mkdir(parents=True)
-    binary.write_bytes(b"PE")
+    binary.write_bytes(b"ELF")
     (tessdata / "jpn.traineddata").write_bytes(b"jpn")
 
     calls: dict[str, object] = {}
@@ -145,9 +145,9 @@ def test_ocr_with_paddleocr_extracts_text_and_handles_pdf_conversion_error(monke
 def test_ocr_with_tesseract_collects_confidences_and_keeps_failed_page_blank(monkeypatch, tmp_path: Path) -> None:
     pdf_path = tmp_path / "image.pdf"
     pdf_path.write_bytes(b"%PDF-1.4")
-    binary = tmp_path / "tesseract.exe"
+    binary = tmp_path / "tesseract"
     tessdata = tmp_path / "tessdata"
-    binary.write_bytes(b"PE")
+    binary.write_bytes(b"ELF")
     tessdata.mkdir()
 
     monkeypatch.setattr(pdf_ocr, "locate_tesseract", lambda *, app_root=None, env=None: binary)

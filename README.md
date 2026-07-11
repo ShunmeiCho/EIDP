@@ -1,139 +1,58 @@
 # EIDP
 
-Education Institution Data Pipeline
+Education Institution Data Pipeline (EIDP) is an internal Linux/Web workflow
+for extracting Japanese vocational-school disclosure data, reviewing evidence,
+cross-checking an external extraction, and producing Excel-compatible results.
 
-EIDP automates collection, review, and Excel export of Japanese vocational
-school disclosure data. The active deployment target is a one-operator Windows
-PC: extract a ZIP, double-click root-level `.bat` launchers, and operate
-through the Streamlit UI.
+## Active product
 
-## Current Scope
+- Deployment: Linux server, with the application process isolated in the
+  repository-local `.venv` managed by `uv`.
+- UI: Streamlit in a browser; the Streamlit process binds `127.0.0.1` and LAN
+  access is provided by an approved internal reverse proxy.
+- Storage: SQLite plus files under the configured `EIDP_DATA_DIR`.
+- Workflow: confirmed PDF intake -> text/image routing -> deterministic
+  extraction -> human review -> master diff -> external double-check -> export.
+- Scope: vocational schools (`専門学校`). Automatic website discovery remains
+  support tooling, not the v1 release gate.
 
-- The current operator workflow targets vocational schools (`専門学校`) on a
-  single Windows PC.
-- University (`大学`) matching data and roadmap material exist in the repository,
-  but a production university parser/workflow is not part of the current
-  operator release path.
-- PDF extraction currently uses deterministic parsing, OCR fallback, and manual
-  review. LLM-assisted extraction is a future extension, not a current release
-  dependency.
+The retired Windows runtime, ZIP packaging, batch launchers, and Stage 6 gate
+are not part of `main`. Their last audit anchor is the Git tag
+`windows-v548-fallback`.
 
-## For Operators
-
-Use the Windows runbook:
-
-- [EIDP Windows 運用ランブック](docs/runbooks/eidp-windows.md)
-
-Normal workflow:
-
-1. Extract `eidp-windows.zip` to `C:\EIDP`.
-2. Run `C:\EIDP\EIDP-setup.bat` once.
-3. Run `C:\EIDP\EIDP-start.bat` to open the UI.
-4. Review PDFs, manual-entry items, fiscal-year corrections, Excel preview, and audit logs
-   in the Streamlit sidebar.
-5. Let `weekly_run.bat` run by Windows Task Scheduler, or run it manually when
-   instructed.
-6. If setup, startup, or URL/PDF acquisition fails, run
-   `C:\EIDP\EIDP-diagnose.bat` and share the generated `logs\diagnostics-*.txt`
-   with the administrator.
-
-Optional OCR:
-
-- Extract `eidp-ocr-addon-windows.zip` into `C:\EIDP`.
-- Confirm `ocr-addon\tesseract\tesseract.exe` and
-  `ocr-addon\tessdata\jpn.traineddata` exist.
-- Restart EIDP with `EIDP-start.bat`.
-
-Optional Playwright/Chromium:
-
-- Not required for the normal operator workflow.
-- Distributed separately if JavaScript-heavy school sites require it.
-
-## For Developers
-
-Architecture and planning:
-
-- [Architecture](docs/architecture.md)
-- [Project rules](docs/governance/project-rules.md)
-- [Goal execution discipline](docs/governance/goal-execution.md)
-- [Technical direction](docs/governance/technical-direction.md)
-- [Release gates](docs/governance/release-gates.md)
-- [v1 exit criteria](docs/release/v1-exit-criteria.md)
-- [v1 known limitations](docs/release/v1-known-limitations.md)
-- [Post-v1 roadmap](docs/roadmap/post-v1-roadmap.md)
-- [Post-v1 decision board](docs/roadmap/post-v1-decision-board.md)
-- [Sprint 8 release gate audit](docs/plans/2026-05-05-sprint8-release-gate-audit.md)
-- [Sprint 8 handoff](docs/plans/2026-05-05-sprint8-handoff.md)
-- [Future v2 roadmap](docs/plans/future-v2-roadmap.md)
-- [Future natural-language query note](docs/plans/future-natural-language-query.md)
-
-Install development dependencies:
+## Local development
 
 ```bash
-uv sync --extra dev
+uv sync --extra dev --extra scraper-basic --extra pdf
+uv run streamlit run src/eidp/web/app.py --server.address 127.0.0.1 --server.port 8502
 ```
 
-Common checks:
+Quality checks:
 
 ```bash
-uv run pytest tests/unit -q
 uv run ruff check .
+uv run --with bandit bandit -q --severity-level high -r src/eidp scripts
 uv run mypy src
-uv run python scripts/check_windows_paths.py
+EIDP_DATABASE_URL='sqlite:///./data/test_audit.sqlite3' uv run pytest
 ```
 
-Windows packaging is built from macOS/Linux but must be validated on Windows:
+## Venus deployment boundary
 
-```bash
-uv run python scripts/download_windows_runtime.py
-uv run python scripts/build_windows_zip.py
-```
+The authorized target is `venus:/home/junming/EIDP`. Deployment edits,
+virtual environments, data, logs, and generated files must remain under that
+directory. Do not modify any path outside it.
 
-Before moving ZIPs to the Windows VM, run the distribution verifier and keep
-the JSON with the ZIPs on the internal file server:
+Typical flow:
 
-```bash
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip \
-  --ocr-addon dist/eidp-ocr-addon-windows.zip \
-  --playwright-addon dist/eidp-playwright-addon-windows.zip \
-  --json > dist/windows-distribution-verification.json
-```
+1. Develop and test locally on `main`.
+2. Transfer through Git/GitHub.
+3. On Venus, update `/home/junming/EIDP` and run `uv sync --frozen` to create or
+   update `/home/junming/EIDP/.venv`.
+4. Copy `deploy/linux/env.example` to a private `.env` under the project root.
+5. Start with `deploy/linux/run_web.sh` and verify the loopback health endpoint.
+6. Validate access from an authorized business PC through the internal network
+   endpoint/reverse proxy.
 
-Optional add-on packagers:
-
-```bash
-uv run python scripts/build_ocr_addon_zip.py --tesseract-dir <dir> --tessdata-dir <dir>
-uv run python scripts/build_playwright_addon_zip.py --wheelhouse <dir> --browsers-dir <dir>
-```
-
-Mac-side tests prove business logic and package shape only. Windows VM offline
-validation remains the deployment gate. Use:
-
-- [Windows VM validation checklist](docs/runbooks/eidp-windows-vm-validation.md)
-- `scripts\validate_install.bat` after setup and weekly run
-- [Operator PC E2E template](docs/runbooks/eidp-operator-e2e-template.md) for
-  the real-PC Stage 6 cycle
-
-VM / real-PC validation must cover:
-
-- `EIDP-setup.bat`
-- `EIDP-start.bat`
-- `first_setup.bat`
-- `launch.bat`
-- `weekly_run.bat`
-- SQLite file locking
-- Excel output and file-lock error handling
-- OCR add-on execution
-- Defender / SmartScreen behavior
-
-## Deployment Status
-
-Venus cron/systemd operation is archived, not live:
-
-- legacy assets: `deploy/legacy-venus/`
-- archived runbook: [legacy target-year rediscovery runbook](docs/runbooks/eidp-r8-rediscovery.md)
-
-The active deployment target is Windows PC. `main` is the stable development
-baseline after PR #2; it is not a v1.0 GA release tag. The current release
-candidate checkpoint is `v1.0-rc.1`, and the final v1.0 tag remains gated on
-the owner/operator sign-off and the publication-lag release decision.
+See [Linux development runbook](docs/runbooks/linux-web-dev-run.md),
+[server requirements](deploy/linux/server-requirements.md), and
+[release gates](docs/governance/release-gates.md).

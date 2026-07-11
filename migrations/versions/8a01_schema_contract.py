@@ -11,7 +11,7 @@ uses. Replaces the old ``UNIQUE(school_id, fiscal_year)`` constraints with
 ``UNIQUE(school_id, fiscal_year, revision)`` plus a partial unique index on
 ``is_current=true``.
 
-This migration is PostgreSQL-side only. SQLite Windows deployments use
+This migration is PostgreSQL-side only. Linux/Web SQLite deployments use
 ``eidp.db.sqlite_bootstrap`` which builds the new schema directly from ORM
 metadata — see Sprint 8.1 for that path.
 """

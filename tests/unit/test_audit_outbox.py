@@ -300,7 +300,7 @@ def test_flush_outbox_dedups_against_monthly_archives(engine, tmp_path):
 def test_flush_outbox_dedups_custom_outbox_against_matching_archives(engine, tmp_path):
     """Custom outbox paths should dedup against archives with the same stem.
 
-    Stage 6 evidence runs use disposable paths; if a custom outbox is rotated
+    Deployment evidence runs use disposable paths; if a custom outbox is rotated
     from ``operator-actions.jsonl`` to ``operator-actions-YYYY-MM.jsonl``, a
     retry must stamp the DB row instead of writing a duplicate active line.
     """

@@ -3711,7 +3711,7 @@ def run_pdf_discovery(
             image-only or ambiguous non-target application guides.
         progress_callback: optional callback invoked after each crawled school
             site with a snapshot of stats and the total site count. Used by the
-            Windows operator UI so the long-running crawl does not sit at one
+            Web operator UI so the long-running crawl does not sit at one
             frozen percentage.
     """
     stats = {

@@ -1,4 +1,4 @@
-"""Consistent SQLite backup helpers for single-PC Windows operation."""
+"""Consistent SQLite backup helpers for the Linux/Web service."""
 
 from __future__ import annotations
 
@@ -50,4 +50,3 @@ def backup_sqlite_database(database_path: Path, backup_path: Path) -> Path:
     finally:
         con.close()
     return target
-

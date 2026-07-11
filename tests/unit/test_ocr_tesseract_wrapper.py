@@ -38,20 +38,19 @@ def test_locate_tesseract_env_override_must_exist(tmp_path: Path):
         locate_tesseract(env={"EIDP_TESSERACT_BIN": str(tmp_path / "nope")})
 
 
-def test_locate_tesseract_prefers_addon_over_path(tmp_path: Path):
-    """The OCR add-on copy must win over a system tesseract so dev hosts
-    don't bleed into operator behavior."""
-    addon = tmp_path / "ocr-addon" / "tesseract"
-    addon.mkdir(parents=True)
-    binary = addon / "tesseract.exe"
-    binary.write_bytes(b"PE")
+def test_locate_tesseract_prefers_project_runtime_over_path(tmp_path: Path):
+    """The project runtime wins over PATH so dev hosts do not affect deployment."""
+    runtime = tmp_path / "ocr" / "tesseract" / "bin"
+    runtime.mkdir(parents=True)
+    binary = runtime / "tesseract"
+    binary.write_bytes(b"ELF")
 
     resolved = locate_tesseract(app_root=tmp_path, env={})
     assert resolved == binary
 
 
 def test_locate_tesseract_falls_back_to_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """No env override, no add-on directory → use shutil.which."""
+    """No env override or project runtime means use shutil.which."""
     fake_bin = tmp_path / "tesseract-shim"
     fake_bin.write_text("", encoding="utf-8")
     monkeypatch.setattr(
@@ -81,12 +80,12 @@ def test_locate_tessdata_prefers_env(tmp_path: Path):
     assert resolved == env_dir
 
 
-def test_locate_tessdata_falls_back_to_addon(tmp_path: Path):
-    addon = tmp_path / "ocr-addon" / "tessdata"
-    addon.mkdir(parents=True)
-    (addon / "jpn.traineddata").write_bytes(b"x")
+def test_locate_tessdata_falls_back_to_project_runtime(tmp_path: Path):
+    runtime = tmp_path / "ocr" / "tessdata"
+    runtime.mkdir(parents=True)
+    (runtime / "jpn.traineddata").write_bytes(b"x")
     resolved = locate_tessdata(app_root=tmp_path, env={})
-    assert resolved == addon
+    assert resolved == runtime
 
 
 def test_locate_tessdata_returns_none_when_missing(tmp_path: Path):

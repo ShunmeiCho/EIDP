@@ -1,11 +1,4 @@
-from __future__ import annotations
-
-import importlib
-
-
-def test_package_import_installs_windows_platform_guard() -> None:
+def test_package_import_succeeds_without_platform_side_effects() -> None:
     import eidp
 
-    reloaded = importlib.reload(eidp)
-
-    assert hasattr(reloaded, "disable_wmi_platform_queries")
+    assert eidp.__doc__ == "Education Institution Data Pipeline."

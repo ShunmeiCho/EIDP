@@ -3,8 +3,8 @@
 Date: 2026-07-05
 
 These gates define what evidence is required before EIDP can describe a
-Linux-hosted Web workflow as v1-ready. They do not change the existing Windows
-release forecast, and they do not declare the pivot approved.
+Linux-hosted Web workflow as v1-ready. The Linux/Web pivot was accepted on
+2026-07-11 and these gates replace the retired desktop release gates.
 
 ## Release Conclusion Vocabulary
 
@@ -42,7 +42,7 @@ Linux/Web v1 is not scoped to:
 
 | Gate | Required evidence before `READY` |
 | --- | --- |
-| Owner/PI approval | Explicit owner/PI decision approving Linux/Web as the v1 release direction |
+| Product direction | Linux/Web is the sole `main` product definition |
 | Correct-PDF intake | Workflow proves users provide or confirm the correct official PDF before extraction |
 | PDF type boundary | Text PDFs pass the main path; image PDFs route to manual/OCR exception state |
 | EIDP extraction | Local extractor produces metric rows with field evidence and confidence policy |
@@ -53,7 +53,7 @@ Linux/Web v1 is not scoped to:
 | Network access | Server access path, allowed network, authentication, and operator reachability are proven |
 | SQLite concurrency | Single-writer boundary or alternate database decision is documented and tested |
 | Audit | PDF selection, extraction comparison, reconciliation, and export decisions are logged |
-| Rollback/fallback | Windows fallback boundary is documented and not deleted |
+| Recovery | SQLite backup/restore and application rollback are exercised without modifying paths outside the application root |
 
 ## Technical Gate Details
 

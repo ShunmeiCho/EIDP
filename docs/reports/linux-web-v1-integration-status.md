@@ -68,24 +68,26 @@ PDF intake
 - Automatic Copilot/NotebookLM API integration or external PDF upload.
 - Excel/XLOOKUP export.
 - Final Excel write.
-- Selected Linux server assignment.
+- Proven deployment on the selected Venus server.
 - Linux server deployment proof.
 - Intended user-PC internal LAN browser access validation.
 - Authentication, PostgreSQL, or React/Next.js.
 - Automatic PDF discovery.
 - Automatic fiscal-year judgment.
-- Windows canary evidence changes.
+- Historical desktop canary evidence migration.
 - Owner/PI final sign-off for data handling and network access boundaries.
 - Operator mapping UI or workflow for resolving remaining `ambiguous_key` rows.
 - React/FastAPI/PostgreSQL implementation.
-- Authentication, roles, locking implementation, and job queue implementation.
+- Authentication, roles, and job queue implementation. The SQLite single-writer
+  application lock is implemented.
 
 ## Linux Server Selection / LAN Gate
 
-Goal 3F-A records that no concrete Linux server has been selected yet. The
-meeting direction establishes Linux/Web and browser use, but it does not assign
-the host, IP/DNS, reverse proxy, filesystem paths, port/firewall owner, backup
-owner, or maintenance process.
+Venus is the selected Linux server and `/home/junming/EIDP` is the only
+authorized application root. The remaining gate is live deployment and
+business-network reachability evidence. IP/DNS, reverse proxy, port/firewall
+owner, authentication, backup owner, and maintenance process still require
+operational confirmation.
 
 Added gate documents:
 
@@ -103,7 +105,9 @@ Current release position:
 - Users do not operate through Linux desktop, SSH, or remote screen.
 - PDF upload, CSV/XLSX upload, and report download must work from the user PC.
 - Docker is optional and must not be assumed.
-- Streamlit remains MVP/internal console; React/FastAPI/PostgreSQL remain the target formal multi-user architecture.
+- Streamlit plus SQLite remains the accepted MVP; React/FastAPI/PostgreSQL is a
+  later option only after measured concurrency or authorization requirements
+  trigger a new architecture decision.
 - Repository guidance keeps Streamlit localhost-bound; LAN access should use an approved internal reverse proxy.
 
 ## Key-Collision Audit
@@ -121,17 +125,16 @@ Result:
 
 ## Multi-User Architecture Boundary
 
-- `docs/decisions/ADR-2026-07-multi-user-web-architecture.md`
+- `docs/decisions/ADR-2026-07-linux-web-pivot.md`
 - `docs/release/linux-web-multi-user-gates.md`
 - `docs/roadmap/react-fastapi-postgres-migration.md`
 
-Decision summary:
+Conditional future boundary (not the current v1 stack):
 
 - Python remains the backend, extraction, Excel, audit, and job-processing core.
 - Streamlit remains MVP/internal prototype UI.
-- React is the target formal multi-user UI.
-- FastAPI is the target backend API layer.
-- PostgreSQL is the target multi-user persistence layer.
+- React, FastAPI, and PostgreSQL may be introduced only after measured
+  concurrency, roles, or durable-job requirements trigger a new decision.
 - Goal 4 proceeds only on unique comparable rows; `ambiguous_key`, `needs_review`, and `excluded` remain not comparable.
 
 ## Release Forecast

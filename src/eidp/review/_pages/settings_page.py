@@ -262,7 +262,7 @@ def validate_operator_settings(
 
 
 def read_build_info(app_root: Path) -> dict[str, str]:
-    """Read Windows ZIP build metadata for operator version checks."""
+    """Read optional build metadata for operator version checks."""
     path = app_root / "BUILD_INFO.json"
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))

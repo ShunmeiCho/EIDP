@@ -9,10 +9,11 @@ patch set, or demo UI.
 
 ## Scope
 
-v1 is scoped to vocational schools (`専門学校`) and the one-operator Windows
-workflow. University (`大学`) data and roadmap material may remain in the
-repository, but production university parsers, gold sets, and operator flows are
-v2+ work.
+v1 is scoped to vocational schools (`専門学校`) and the centralized Linux/Web
+workflow. Business users provide or confirm the correct PDF, reviewers resolve
+exceptions, and the server produces the shared Excel output. SQLite remains a
+single-writer store; real-time collaborative editing and a role/permission
+system are not v1 claims. University (`大学`) production flows are v2+ work.
 
 Do not add "700 universities production-ready" to a v1 release gate or public
 claim.
@@ -242,8 +243,9 @@ Do not trade crawl politeness and reproducibility for short-term hit rate.
 - Do not let UI pages invent raw workflow status names.
 - Do not rewrite the stack only for "modernization".
 - Do not bypass URL safety or crawl throttling.
-- Do not release a Windows operator ZIP based only on Mac/Linux tests.
-- Do not claim GA while target-year yield or publication-lag gates are open.
+- Do not expose the Web service beyond `127.0.0.1` without an approved proxy,
+  authentication, and network-access design.
+- Do not claim GA while served-app, network, backup, or audit gates are open.
 - Do not change parser main logic without regression fixtures or gold samples.
 - Do not let README, architecture, UI prototype, and release status contradict
   each other.

@@ -1,4 +1,4 @@
-"""Sprint 8.4.b — cross-process advisory lock regression.
+"""POSIX cross-process advisory lock regression.
 
 Owner-pinned contract:
 
@@ -11,28 +11,18 @@ Owner-pinned contract:
   * probe_lock() is non-mutating: calling it does not steal the lock
     from the legitimate holder.
 
-We test the POSIX side directly. Windows side compiles via the same
-import path (msvcrt) but the test infrastructure here runs on macOS
-CI; the Windows regression lives in 8.5 packaging spike where a real
-Win VM is in scope.
 """
 
 from __future__ import annotations
 
 import multiprocessing
 import os
-import sys
 import time
 from pathlib import Path
 
 import pytest
 
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
-
-pytestmark = pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="POSIX-side regression; Windows path validated in 8.5 VM spike",
-)
 
 
 def test_acquire_lock_basic_round_trip(tmp_path: Path):

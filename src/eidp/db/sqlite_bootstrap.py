@@ -2,7 +2,7 @@
 
 Phase 8.1 (Sprint 8): the existing alembic chain (cbb204a26301 et al.) uses
 PostgreSQL-only constructs (`postgresql_using`, raw `UPDATE ... FROM`, etc.) that
-fail on SQLite. For Windows business-user deployment we therefore:
+fail on SQLite. For the Linux/Web single-writer deployment we therefore:
 
 1. Create all tables from ORM metadata (`Base.metadata.create_all`).
 2. Re-create the null-safe expression unique index that lives in migration
@@ -10,7 +10,7 @@ fail on SQLite. For Windows business-user deployment we therefore:
    in ORM metadata. SQLite supports expression indexes with ``COALESCE`` so we
    reproduce it via raw SQL with ``IF NOT EXISTS`` for idempotency.
 3. Apply runtime PRAGMAs (WAL, foreign_keys, busy_timeout) for safer
-   single-file SQLite operation under the UI + weekly_run sharing pattern.
+   single-file SQLite operation shared by the Web UI and scheduled jobs.
 4. Stamp alembic ``head`` so the schema appears already-migrated and future
    migrations only run for additive changes.
 
@@ -159,8 +159,8 @@ def ensure_sqlite_additive_columns(engine: Engine) -> None:
     """Replay additive SQLite-only schema fixes on upgraded operator DBs.
 
     ``create_all(checkfirst=True)`` creates missing tables but never adds
-    columns to existing tables. Windows ZIP upgrades rely on this bootstrap
-    path instead of the PostgreSQL-oriented Alembic chain, so additive fields
+    columns to existing tables. Linux/Web SQLite upgrades rely on this
+    bootstrap path instead of the PostgreSQL-oriented Alembic chain, so additive fields
     needed by current ORM code must be patched here.
     """
     with engine.begin() as conn:
@@ -201,7 +201,7 @@ def create_null_safe_dept_index(engine: Engine) -> None:
 def ensure_sqlite_document_file_hash_index(engine: Engine) -> None:
     """Clean legacy duplicate document hashes and enforce global hash uniqueness.
 
-    Older Windows SQLite installs may have been created before
+    Older SQLite databases may have been created before
     ``Document.file_hash`` became globally unique. ``create_all(checkfirst=True)``
     is not a reliable migration mechanism for indexes on existing tables, so the
     bootstrap path must explicitly enforce this contract.

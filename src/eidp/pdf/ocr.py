@@ -115,7 +115,7 @@ def _check_ocr_availability() -> str:
         return override
 
     # Auto-detect: prefer PaddleOCR > packaged/system Tesseract TSV >
-    # PyMuPDF OCR. The Tesseract TSV wrapper is the Windows add-on path
+    # PyMuPDF OCR. The Tesseract TSV wrapper is the optional OCR path
     # and preserves per-word confidence values for the DB/UI.
     try:
         from paddleocr import PaddleOCR  # noqa: F401

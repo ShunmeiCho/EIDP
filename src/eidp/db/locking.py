@@ -1,9 +1,7 @@
-"""Cross-process advisory lock for the EIDP single-user Windows deploy.
+"""POSIX cross-process advisory lock for the Linux/Web deployment.
 
-Sprint 8.4.b. Provides a single advisory lock that the weekly runner
-takes for the duration of its job, and that the Streamlit UI checks
-before performing manual writes (manual_entry, fiscal_year_override,
-Excel preview-and-export).
+The lock coordinates background jobs, CLI writes, and Streamlit writes that
+share the SQLite-backed application data directory.
 
 Design contract owner pinned in v6:
 
@@ -11,8 +9,7 @@ Design contract owner pinned in v6:
     start to finish; UI write paths refuse with a banner ("週次処理中、
     編集は一時停止") if they cannot acquire it. UI read paths run
     unimpeded.
-  * Cross-platform — Windows is the production target (msvcrt.locking)
-    but development is on macOS / Linux (fcntl.flock).
+  * Linux/macOS use ``fcntl.flock``; Windows is no longer a supported target.
   * Stale-lock recovery — the lock file persists across crashes, but
     OS-level file locks release on process death, so re-acquisition
     "just works". The lock file also records pid+started_at metadata
@@ -39,9 +36,9 @@ API
 from __future__ import annotations
 
 import contextlib
+import fcntl
 import json
 import os
-import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -49,13 +46,6 @@ from pathlib import Path
 from typing import Any, cast
 
 import structlog
-
-# Cross-platform file-lock primitives.
-if sys.platform == "win32":  # pragma: no cover — exercised in Windows VM tests
-    import msvcrt
-else:
-    import fcntl
-
 
 log = structlog.get_logger(__name__)
 
@@ -82,45 +72,22 @@ class LockStatus:
 
 def _try_lock(fd: int) -> bool:
     """Non-blocking exclusive lock attempt. Returns True on success."""
-    if sys.platform == "win32":  # pragma: no cover
-        try:
-            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
-            return True
-        except OSError:
-            return False
-    else:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return True
-        except (BlockingIOError, OSError):
-            return False
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except (BlockingIOError, OSError):
+        return False
 
 
 def _block_lock(fd: int) -> None:
-    if sys.platform == "win32":  # pragma: no cover
-        # msvcrt has no native blocking lock with retry; emulate via
-        # short sleep loop. This path is rarely used (callers prefer
-        # the non-blocking variant).
-        import time
-        while True:
-            if _try_lock(fd):
-                return
-            time.sleep(0.2)
-    else:
-        fcntl.flock(fd, fcntl.LOCK_EX)
+    fcntl.flock(fd, fcntl.LOCK_EX)
 
 
 def _unlock(fd: int) -> None:
-    if sys.platform == "win32":  # pragma: no cover
-        try:
-            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
-        except OSError as exc:
-            log.warning("lock_release_failed", platform="win32", error=str(exc))
-    else:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_UN)
-        except OSError as exc:
-            log.warning("lock_release_failed", platform="posix", error=str(exc))
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    except OSError as exc:
+        log.warning("lock_release_failed", platform="posix", error=str(exc))
 
 
 def _write_owner_metadata(path: Path, owner: str) -> None:
@@ -180,8 +147,7 @@ def acquire_lock(
         If True, wait for the lock instead of raising. Defaults False.
     timeout :
         Optional upper bound for blocking acquisitions, in seconds.
-        Currently advisory only on POSIX (fcntl) and ignored on
-        Windows; the loop wakeup is 200ms.
+        Implemented with a 200ms polling interval.
 
     Raises
     ------

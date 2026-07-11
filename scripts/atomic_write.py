@@ -1,4 +1,4 @@
-"""Small stdlib-only atomic write helper for Windows operator scripts."""
+"""Small stdlib-only atomic write helper for operational scripts."""
 
 from __future__ import annotations
 

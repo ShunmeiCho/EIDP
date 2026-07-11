@@ -1,11 +1,8 @@
-"""Sprint 8.6.c — runtime detection for OCR auto-enable.
+"""Runtime detection for OCR auto-enable on the Linux server.
 
-Plan v6 chose a hardware-aware default: OCR auto-enables only when the
-operator PC has at least 2 logical CPU cores AND at least 4 GB free
-RAM. Below that threshold OCR is forced OFF (UI may still let the
-operator manually trigger OCR on a single PDF, but the auto path stays
-quiet so a 4GB Atom-class PC doesn't grind for an hour during weekly
-ingestion).
+OCR auto-enables only when the server has at least 2 logical CPU cores and at
+least 4 GB free RAM. Below that threshold the UI may still allow a controlled
+manual run, while the automatic path stays off.
 
 The whole module is pure data + a couple of stdlib calls, written so
 tests can inject fake CPU / memory readings without depending on
@@ -19,7 +16,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 #: Defaults from Sprint 8 v6 plan. ``EIDP_OCR_MIN_CPUS`` /
-#: ``EIDP_OCR_MIN_FREE_RAM_MB`` env vars override per operator PC.
+#: ``EIDP_OCR_MIN_FREE_RAM_MB`` env vars override per server process.
 DEFAULT_MIN_CPUS = 2
 DEFAULT_MIN_FREE_RAM_MB = 4 * 1024  # 4 GB
 
@@ -46,19 +43,13 @@ def _default_cpu_count_reader() -> int:
 def _default_free_ram_reader() -> int:
     """Best-effort free-memory probe in MB.
 
-    Tries ``psutil.virtual_memory().available`` first when present, then
-    uses the Windows ``GlobalMemoryStatusEx`` API via stdlib ``ctypes``.
-    Falls back to ``os.sysconf("SC_AVPHYS_PAGES")`` on POSIX. Worst case
+    Tries ``psutil.virtual_memory().available`` first when present, then falls
+    back to ``os.sysconf("SC_AVPHYS_PAGES")``. Worst case
     returns 0 so ``meets_threshold`` will fail closed.
     """
     psutil_mb = _psutil_available_memory_mb()
     if psutil_mb is not None:
         return psutil_mb
-
-    if os.name == "nt":
-        windows_mb = _windows_available_memory_mb()
-        if windows_mb is not None:
-            return windows_mb
 
     posix_mb = _posix_available_memory_mb()
     if posix_mb is not None:
@@ -72,32 +63,6 @@ def _psutil_available_memory_mb() -> int | None:
         import psutil  # type: ignore[import-untyped]
 
         return int(psutil.virtual_memory().available // (1024 * 1024))
-    except Exception:
-        return None
-
-
-def _windows_available_memory_mb() -> int | None:
-    try:
-        import ctypes
-
-        class MEMORYSTATUSEX(ctypes.Structure):
-            _fields_ = [
-                ("dwLength", ctypes.c_ulong),
-                ("dwMemoryLoad", ctypes.c_ulong),
-                ("ullTotalPhys", ctypes.c_ulonglong),
-                ("ullAvailPhys", ctypes.c_ulonglong),
-                ("ullTotalPageFile", ctypes.c_ulonglong),
-                ("ullAvailPageFile", ctypes.c_ulonglong),
-                ("ullTotalVirtual", ctypes.c_ulonglong),
-                ("ullAvailVirtual", ctypes.c_ulonglong),
-                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
-            ]
-
-        status = MEMORYSTATUSEX()
-        status.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):  # type: ignore[attr-defined]
-            return None
-        return int(status.ullAvailPhys // (1024 * 1024))
     except Exception:
         return None
 

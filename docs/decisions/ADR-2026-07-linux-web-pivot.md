@@ -1,130 +1,69 @@
-# ADR-2026-07: Linux/Web pivot decision package
+# ADR-2026-07: Linux/Web is the EIDP v1 product
 
-- Status: Proposed
-- Date: 2026-07-05
-- Branch: `docs/linux-web-pivot-decision`
-- Scope: decision documentation only
+- Status: **Accepted**
+- Decision date: 2026-07-11
+- Implementation branch: `main`
+- Release forecast: `NOT_READY` until the served-app gates pass
 
-## Decision Summary
+## Decision
 
-Meeting direction changes the v1 product goal from a Windows single-operator
-package optimized around automatic target-year PDF discovery to a
-Linux-hosted Web workflow focused on correct-PDF intake, extraction, human
-double-check, and Excel integration.
+EIDP v1 is a browser-accessed Web application hosted on the laboratory Linux
+server. The Windows single-machine runtime, ZIP distribution, batch launchers,
+and Stage 6 release gate are retired from `main`.
 
-This ADR does not approve the pivot for release. It records the decision
-package needed for owner/PI review. Release Forecast remains `NOT_READY` until
-owner/PI approval and the Linux/Web release gates are satisfied with evidence.
+The historical Windows v548 implementation remains available only through Git
+history and the local audit tag `windows-v548-fallback` (`c1a9690`). It is not a
+fallback release lane and receives no new development.
 
-## Current v1 Goal After The Meeting
+`main` is the sole development line. It contains the former
+`integration/linux-web-v1` work and the Ohara table-aware extraction core.
 
-v1 should prioritize:
+## Product boundary
 
-- user-provided or user-confirmed correct `機関要件確認申請書` PDFs;
-- deterministic local EIDP extraction from text PDFs;
-- comparison against operator-supplied Copilot/NotebookLM extraction outputs;
-- human reconciliation of mismatches before Excel;
-- Excel output that can be joined with existing workbook workflows through
-  XLOOKUP-compatible keys and columns;
-- image PDFs as exception/manual/OCR flow, not the main release path.
+- A business user confirms the correct official PDF and fiscal year.
+- EIDP accepts PDF/ZIP/URL metadata through Streamlit.
+- The server classifies text versus image PDFs, runs deterministic extraction,
+  retains cell evidence, and routes exceptions visibly.
+- A reviewer accepts/corrects/excludes rows.
+- Reviewed rows are compared with read-only `master.xlsx` data and an optional
+  externally produced extraction.
+- The output remains Excel-compatible.
 
-Full automatic target-year PDF discovery and fiscal-year judgment are no
-longer the main v1 release path. They remain useful support tooling, but they
-must not be treated as the release blocker for the Linux/Web v1 proposal.
+Automatic discovery and fiscal-year judgment remain support-only tooling. The
+historical 60% strict-yield and 30% manual-workload thresholds are health
+metrics, not the Linux/Web release gate.
 
-## What Stays Reusable From The Windows Track
+## Current architecture
 
-The Windows track produced assets that remain useful in either deployment:
+- Python 3.12 domain core and extraction worker.
+- Streamlit Web UI bound to `127.0.0.1`.
+- SQLite/SQLAlchemy with a POSIX application-wide single-writer lock.
+- All Venus runtime state below `/home/junming/EIDP` in a project-local virtual
+  environment.
+- Approved internal reverse proxy/port for business-PC access.
 
-- PDF extraction tests, schemas, confidence logic, and manual review concepts;
-- table-aware extraction first cut from `feature/table-aware-ohara-extraction`;
-- read-only `data/master.xlsx` import and Excel export conventions;
-- release evidence discipline, owner sign-off shape, and Stage 6 verifier
-  vocabulary;
-- SQLite data model and migration history;
-- append-only audit principles for manual corrections and export decisions;
-- packaging lessons about local-only secrets, file locks, and reproducibility.
+FastAPI, React, and PostgreSQL are future options. They are introduced only
+when measured multi-operator concurrency, roles, or durable job orchestration
+exceeds the current Streamlit/SQLite contract.
 
-The no-regret extraction first cut already completed for the pivot is:
+## Preserved assets
 
-- field aliases for `生徒` / `学生` capacity and enrollment labels;
-- pdfplumber table-grid extraction for capacity, enrollment, and international
-  student counts;
-- page/table/row/column evidence on extracted table values;
-- Ohara table regression coverage;
-- a small `data/master.xlsx` ground-truth diff harness.
+- deterministic PDF/table extraction and field aliases;
+- cell evidence and confidence routing;
+- read-only master loader/diff and Excel output;
+- four-table append-only fiscal-year correction;
+- SQLite schema/migrations and audit outbox;
+- scraper/discovery safety and data-quality logic as support tooling;
+- POSIX lock, backup, diagnostics, and regression tests.
 
-This ADR references that work as completed implementation evidence. It does
-not modify extraction code in this docs-only branch.
+## Release consequences
 
-## What Becomes Legacy Or Fallback
+Accepting the product direction does not declare the service ready. Release
+still requires fresh quality results, Venus venv/start/restart proof, real LAN
+browser upload/review/download evidence, image/OCR-lane policy evidence, and
+backup/restore proof defined in `docs/governance/release-gates.md`.
 
-The following Windows-track behavior becomes legacy or fallback for Linux/Web
-v1 unless owner/PI explicitly keeps it as a release requirement:
+## Superseded documents
 
-- Windows ZIP as the primary delivery artifact;
-- one-PC Streamlit operation as the primary operator workflow;
-- fully automatic target-year discovery as the main v1 success path;
-- broad crawler improvement as the first response to low strict-yield numbers;
-- image-PDF OCR as mandatory core behavior;
-- local Excel file-lock behavior as the only workbook-output operational
-  model.
-
-These items are not deleted or archived by this decision package. They remain
-available for fallback, audit comparison, and rollback until an owner-approved
-retirement decision exists.
-
-## Proposed Linux/Web Shape
-
-The proposed v1 system is a Linux-hosted, browser-accessed internal tool:
-
-- users upload or select the correct official PDF locally within the EIDP
-  environment;
-- EIDP runs local extraction and records evidence;
-- users import or paste externally generated Copilot/NotebookLM extraction
-  results when policy allows;
-- the Web UI shows differences and requires human acceptance before export;
-- output is staged for Excel/XLOOKUP workflows and never silently writes
-  unverified values into final Excel.
-
-The old HTML prototype, including `prototype/support.js` or equivalent
-support files, is not production UI and must not be reused as the production
-implementation.
-
-## Open Owner/PI Decisions
-
-Owner/PI must still decide:
-
-- whether Linux/Web is approved as the v1 release direction;
-- who may access the Linux server and from which network;
-- whether external Copilot/NotebookLM handling is allowed, and for which data;
-- whether user-provided correct PDFs are enough for v1 scope;
-- whether automatic target-year judgment is support-only or still a partial
-  release gate;
-- whether image PDFs require OCR in core v1 or remain manual exceptions;
-- whether SQLite single-writer limits are acceptable for the expected operator
-  concurrency;
-- what evidence proves Excel/XLOOKUP output is ready.
-
-## Consequences
-
-Positive:
-
-- v1 can focus on extraction correctness and human-verifiable PDF intake;
-- Windows work is preserved as fallback and evidence rather than thrown away;
-- table-aware extraction work is directly reusable;
-- risky automatic year judgment is no longer over-weighted in v1.
-
-Tradeoffs:
-
-- Linux/Web introduces network, authentication, and concurrency questions;
-- Copilot/NotebookLM comparison introduces data-handling policy risk;
-- SQLite can remain viable only if the Web workflow keeps a clear
-  single-writer boundary;
-- release evidence must be rebuilt for the new operation model.
-
-## Release Position
-
-This decision package does not declare `READY`, does not change
-`docs/reports/current-release-status.md`, and does not change the v548 Windows
-canary evidence. The release forecast remains `NOT_READY`.
+This ADR is canonical and supersedes the earlier multi-user architecture drafts.
+They must not be used as a separate v1 product definition.

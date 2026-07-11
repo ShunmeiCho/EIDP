@@ -1,19 +1,18 @@
 """Sprint 8.6.c — Tesseract subprocess wrapper.
 
-Wraps the system / add-on Tesseract binary, parses its TSV output, and
+Wraps the system or project-local Tesseract binary, parses its TSV output, and
 returns a structured ``OcrPageResult``. Sprint 8.6.d will plug
 ``compute_f1_ocr_tesseract`` into the per-page result so the confidence
 breakdown surfaces alongside ``DepartmentYearly`` rows.
 
-Layout assumptions on Windows operator PC (set by the OCR add-on ZIP):
+Optional project-local Linux layout:
 
-    %EIDP_APP_ROOT%\\ocr-addon\\tesseract\\tesseract.exe
-    %EIDP_APP_ROOT%\\ocr-addon\\tessdata\\jpn.traineddata
+    $EIDP_APP_ROOT/ocr/tesseract/bin/tesseract
+    $EIDP_APP_ROOT/ocr/tessdata/jpn.traineddata
 
-On dev / Linux / macOS the binary may live on PATH (``which
-tesseract``) or under the operator add-on directory; ``locate_tesseract``
-prefers the add-on path when available so dev-host quirks don't bleed
-into operator PC behavior.
+The binary may also live on PATH (``which tesseract``).
+``locate_tesseract`` prefers the project-local path when available so
+development-host configuration does not affect the deployed service.
 
 The module is designed to be unit-testable without invoking a real
 Tesseract — every subprocess hop is funneled through a single
@@ -90,15 +89,14 @@ def locate_tesseract(*, app_root: Path | None = None,
     Resolution order, first match wins:
 
     1. ``EIDP_TESSERACT_BIN`` env var (operator override).
-    2. ``app_root / "ocr-addon" / "tesseract" / "tesseract.exe"`` (Windows
-       add-on layout) or ``.../tesseract`` (POSIX dev) — the canonical
-       path the OCR add-on ZIP populates.
-    3. ``shutil.which("tesseract")`` — system PATH fallback for dev.
+    2. ``app_root / "ocr" / "tesseract" / "bin" / "tesseract"`` — an
+       optional project-local Linux runtime.
+    3. ``shutil.which("tesseract")`` — system PATH fallback.
 
     Raises ``OcrBinaryNotFoundError`` with a single readable message if
     none of the above resolve. We surface a clean exception rather than
     falling back to ``None`` so callers can render a deterministic UI
-    banner ("OCR add-on not installed").
+    banner ("OCR runtime not installed").
     """
     env_map = env if env is not None else os.environ
 
@@ -112,20 +110,16 @@ def locate_tesseract(*, app_root: Path | None = None,
         )
 
     if app_root is not None:
-        for relative in (
-            Path("ocr-addon") / "tesseract" / "tesseract.exe",
-            Path("ocr-addon") / "tesseract" / "tesseract",
-        ):
-            candidate = app_root / relative
-            if candidate.is_file():
-                return candidate
+        candidate = app_root / "ocr" / "tesseract" / "bin" / "tesseract"
+        if candidate.is_file():
+            return candidate
 
     on_path = shutil.which("tesseract")
     if on_path:
         return Path(on_path)
 
     raise OcrBinaryNotFoundError(
-        "tesseract binary not found — install OCR add-on or set "
+        "tesseract binary not found — install the project OCR runtime or set "
         "EIDP_TESSERACT_BIN to an absolute path"
     )
 
@@ -146,7 +140,7 @@ def locate_tessdata(*, app_root: Path | None = None,
             return candidate
 
     if app_root is not None:
-        candidate = app_root / "ocr-addon" / "tessdata"
+        candidate = app_root / "ocr" / "tessdata"
         if candidate.is_dir():
             return candidate
 

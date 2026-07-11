@@ -7,6 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from eidp.config import settings
+from eidp.db.locking import LockBusyError
 from eidp.pipeline.extraction_review import (
     ReviewStatus,
     ReviewValidationError,
@@ -14,11 +15,13 @@ from eidp.pipeline.extraction_review import (
     correct_review_record,
     ensure_review_records,
     exclude_review_record,
+    load_review_records,
     mark_review_needs_review,
     review_report_csv,
 )
 from eidp.web.components.evidence_panel import render_evidence_panel
 from eidp.web.components.extracted_rows_table import render_extracted_review_table
+from eidp.web.locking import acquire_web_write_lock
 
 
 def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
@@ -26,7 +29,12 @@ def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
     st.title("EIDP Extraction Review")
     st.caption("Review extracted rows and evidence. This page does not write final Excel output.")
 
-    records = ensure_review_records(resolved_root)
+    try:
+        with acquire_web_write_lock(resolved_root, owner="web_review_sync"):
+            records = ensure_review_records(resolved_root)
+    except LockBusyError as exc:
+        st.warning(str(exc))
+        records = load_review_records(resolved_root)
     extracted_count = sum(1 for record in records if record.metric)
     exception_count = sum(1 for record in records if not record.metric)
     reviewed_count = sum(
@@ -54,6 +62,7 @@ def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
     action_cols = st.columns(4)
     if action_cols[0].button("Accept", type="primary"):
         _run_action(
+            resolved_root,
             lambda: accept_review_record(
                 intake_root=resolved_root,
                 review_id=selected.review_id,
@@ -63,6 +72,7 @@ def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
         )
     if action_cols[1].button("Correct"):
         _run_action(
+            resolved_root,
             lambda: correct_review_record(
                 intake_root=resolved_root,
                 review_id=selected.review_id,
@@ -73,6 +83,7 @@ def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
         )
     if action_cols[2].button("Needs review"):
         _run_action(
+            resolved_root,
             lambda: mark_review_needs_review(
                 intake_root=resolved_root,
                 review_id=selected.review_id,
@@ -82,6 +93,7 @@ def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
         )
     if action_cols[3].button("Exclude"):
         _run_action(
+            resolved_root,
             lambda: exclude_review_record(
                 intake_root=resolved_root,
                 review_id=selected.review_id,
@@ -104,11 +116,12 @@ def _review_label(record: object) -> str:
     return f"{getattr(record, 'school_name')} / {department} / {metric}"
 
 
-def _run_action(action: object) -> None:
+def _run_action(intake_root: Path, action: object) -> None:
     try:
-        if callable(action):
-            action()
-    except (KeyError, ReviewValidationError) as exc:
+        with acquire_web_write_lock(intake_root, owner="web_extraction_review"):
+            if callable(action):
+                action()
+    except (KeyError, LockBusyError, ReviewValidationError) as exc:
         st.error(str(exc))
         return
     st.success("Review saved.")

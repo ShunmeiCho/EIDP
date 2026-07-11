@@ -1002,8 +1002,8 @@ def resolve_pdf_path(file_path: str | None, *, app_root: Path | None = None) -> 
     """Resolve a document file_path for preview/download.
 
     ``Document.file_path`` is typically stored as a relative path such as
-    ``data/pdfs/1/abcd.pdf``. Windows launchers set cwd to app root, but
-    tests and installed wheels may not, so callers can pass ``app_root``
+    ``data/pdfs/1/abcd.pdf``. The service normally starts from the app root,
+    but tests and installed wheels may not, so callers can pass ``app_root``
     explicitly. Absolute paths are returned unchanged.
     """
     if not file_path:
