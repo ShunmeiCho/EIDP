@@ -153,9 +153,11 @@ business truth.
   restart. Unsaved Streamlit
   widget edits do not survive a process or browser failure and are not claimed
   as resumable.
-- **AVAILABLE:** parse/extraction failure retains the source PDF, reason and
-  retriable state;
-  it never produces Excel-ready data.
+- **PENDING — core only:** the extraction core retains the source PDF, reason
+  and retriable state on failure, but this path is not yet wired into the served
+  Streamlit UI. The served workflow must not claim this behavior until that
+  integration is implemented and tested; failed extraction must never produce
+  Excel-ready data.
 - **PENDING:** except for the liveness endpoint, an invalid trusted-proxy
   identity or secret rejects the entire application request and never
   downgrades to a read-only view or fallback.
