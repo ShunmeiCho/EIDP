@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from eidp.ops import deployment_manifest as deployment_manifest_module
 from eidp.ops.deployment_manifest import (
     DeploymentManifest,
     DeploymentManifestError,
@@ -202,6 +203,82 @@ def test_expected_commit_mode_ignores_git_replace_refs_that_forge_ancestry(
         )
 
 
+@pytest.mark.parametrize(
+    ("config_key", "config_value"),
+    (("remote.origin.promisor", "true"), ("extensions.partialClone", "origin")),
+)
+def test_collection_refuses_promisor_or_partial_clone_repositories(
+    repo: RepoFixture,
+    runtime: RuntimeLaunchConfig,
+    config_key: str,
+    config_value: str,
+) -> None:
+    repo.git("config", config_key, config_value)
+
+    with pytest.raises(DeploymentManifestError, match="promisor|partial clone"):
+        collect_deployment_manifest(app_root=repo.path, runtime=runtime, actor="operator")
+
+
+def test_collection_disables_configured_fsmonitor_hooks(
+    repo: RepoFixture,
+    runtime: RuntimeLaunchConfig,
+) -> None:
+    run_dir = repo.path / "run"
+    run_dir.mkdir()
+    marker = run_dir / "fsmonitor-invoked"
+    hook = repo.path / ".git" / "hooks" / "fsmonitor-test"
+    hook.write_text(f"#!/bin/sh\nprintf invoked > {marker!s}\n", encoding="utf-8")
+    hook.chmod(0o755)
+    repo.git("config", "core.fsmonitor", str(hook))
+
+    collect_deployment_manifest(app_root=repo.path, runtime=runtime, actor="operator")
+
+    assert not marker.exists()
+
+
+def test_git_evidence_commands_disable_lazy_fetch_and_have_bounded_timeouts(
+    repo: RepoFixture,
+    runtime: RuntimeLaunchConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_run = deployment_manifest_module.subprocess.run
+    evidence_calls: list[tuple[list[str], dict[str, str], object]] = []
+
+    def record_run(command: list[str], *args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        if command and command[0] == "git":
+            evidence_calls.append((command, kwargs["env"], kwargs.get("timeout")))  # type: ignore[arg-type]
+        return original_run(command, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(deployment_manifest_module.subprocess, "run", record_run)
+
+    collect_deployment_manifest(app_root=repo.path, runtime=runtime, actor="operator")
+
+    assert evidence_calls
+    assert all(command[1:3] == ["-c", "core.fsmonitor=false"] for command, _env, _timeout in evidence_calls)
+    assert all(environment["GIT_NO_LAZY_FETCH"] == "1" for _command, environment, _timeout in evidence_calls)
+    assert all(isinstance(timeout, (int, float)) and 0 < timeout <= 30 for _command, _env, timeout in evidence_calls)
+
+
+def test_git_evidence_timeout_fails_loudly(
+    repo: RepoFixture,
+    runtime: RuntimeLaunchConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed_timeouts: list[object] = []
+
+    def time_out(command: list[str], *args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        observed_timeouts.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(command, kwargs.get("timeout"))
+
+    monkeypatch.setattr(deployment_manifest_module.subprocess, "run", time_out)
+
+    with pytest.raises(DeploymentManifestError, match="timed out"):
+        collect_deployment_manifest(app_root=repo.path, runtime=runtime, actor="operator")
+
+    assert observed_timeouts
+    assert isinstance(observed_timeouts[0], (int, float))
+
+
 @pytest.mark.parametrize("index_flag", ("--assume-unchanged", "--skip-worktree"))
 def test_collection_refuses_index_flags_that_hide_a_modified_tracked_file(
     repo: RepoFixture,
@@ -238,7 +315,7 @@ def test_collection_requires_a_safe_tracked_uv_lock(
         repo.git("commit", "-m", "ignore untracked lock")
         repo.set_origin_main(repo.head)
 
-    with pytest.raises(DeploymentManifestError, match="uv.lock"):
+    with pytest.raises(DeploymentManifestError, match="uv.lock|clean checkout"):
         collect_deployment_manifest(app_root=repo.path, runtime=runtime, actor="operator")
 
 
@@ -290,7 +367,10 @@ def test_collection_rejects_source_paths_outside_the_project_boundary(
             (repo.path / "data").rmdir()
             (repo.path / "data").symlink_to(outside, target_is_directory=True)
 
-    with pytest.raises(DeploymentManifestError, match="project root|project-local|symlink|eidp.sqlite3"):
+    with pytest.raises(
+        DeploymentManifestError,
+        match="project root|project-local|symlink|eidp.sqlite3|clean checkout",
+    ):
         collect_deployment_manifest(app_root=app_root, runtime=runtime, actor="operator")
 
 
@@ -351,6 +431,47 @@ def test_collection_ignores_inherited_git_repository_redirection(
     result = collect_deployment_manifest(app_root=repo.path, runtime=runtime, actor="operator")
 
     assert result.deployed_commit == expected_head
+
+
+@pytest.mark.parametrize("mutation", ("head_commit", "uv_lock", "explicit_origin_advance"))
+def test_collection_rejects_source_changes_between_pre_and_post_snapshots(
+    repo: RepoFixture,
+    runtime: RuntimeLaunchConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    mutation: str,
+) -> None:
+    deployed = repo.head
+    original_source_commits = deployment_manifest_module._source_commits
+    calls = 0
+
+    def mutate_after_pre_snapshot(app_root: Path, expected: str | None) -> tuple[str, str, str]:
+        nonlocal calls
+        calls += 1
+        snapshot = original_source_commits(app_root, expected)
+        if calls == 1:
+            if mutation == "head_commit":
+                (repo.path / "tracked.txt").write_text("new deployed source\n", encoding="utf-8")
+                repo.git("add", "tracked.txt")
+                repo.git("commit", "-m", "change during manifest collection")
+                repo.set_origin_main(repo.head)
+            elif mutation == "uv_lock":
+                (repo.path / "uv.lock").write_text("version = 2\n", encoding="utf-8")
+            else:
+                repo.set_origin_main(repo.commit_tree(parent=deployed))
+        return snapshot
+
+    monkeypatch.setattr(deployment_manifest_module, "_source_commits", mutate_after_pre_snapshot)
+    expected = deployed if mutation == "explicit_origin_advance" else None
+
+    with pytest.raises(DeploymentManifestError, match="changed|stable|clean checkout"):
+        collect_deployment_manifest(
+            app_root=repo.path,
+            runtime=runtime,
+            actor="operator",
+            expected_deployment_commit=expected,
+        )
+
+    assert calls == 2
 
 
 @pytest.mark.parametrize(
@@ -482,6 +603,42 @@ def test_atomic_write_never_unlinks_a_preexisting_random_temp_name(
         write_deployment_manifest_atomic(target, manifest)
 
     assert preexisting.read_text(encoding="utf-8") == "not created by this invocation\n"
+
+
+def test_writer_and_controller_use_one_shared_manifest_projection(
+    repo: RepoFixture,
+    manifest: DeploymentManifest,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from eidp.ops import runtime_controller
+
+    projection = {"projection_contract": "only-this-whitelist"}
+    monkeypatch.setattr(
+        deployment_manifest_module,
+        "deployment_manifest_payload",
+        lambda _manifest: projection,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        runtime_controller,
+        "deployment_manifest_payload",
+        lambda _manifest: projection,
+        raising=False,
+    )
+
+    direct_target = repo.path / "run" / "direct-deployment-manifest.json"
+    direct_target.parent.mkdir()
+    write_deployment_manifest_atomic(direct_target, manifest)
+    assert json.loads(direct_target.read_text(encoding="utf-8")) == projection
+
+    monkeypatch.setenv("EIDP_APP_ROOT", str(repo.path))
+    result = runtime_controller.main(("manifest", "--actor", "operator"))
+    output = json.loads(capsys.readouterr().out)
+    persisted = json.loads((repo.path / "run" / "deployment-manifest.json").read_text(encoding="utf-8"))
+
+    assert result == 0
+    assert output == persisted == projection
 
 
 @pytest.mark.parametrize("unsafe_path", ("final_symlink", "parent_symlink"))

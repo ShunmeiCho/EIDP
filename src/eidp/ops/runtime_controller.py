@@ -11,13 +11,13 @@ import subprocess
 import sys
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from dataclasses import asdict
 from pathlib import Path
 from typing import NoReturn
 
 from eidp.ops.deployment_manifest import (
     DeploymentManifestError,
     collect_deployment_manifest,
+    deployment_manifest_payload,
     write_deployment_manifest_atomic,
 )
 from eidp.ops.runtime_config import load_runtime_config
@@ -206,7 +206,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
                     off_host_receipt_id=parsed.off_host_receipt_id,
                 )
                 write_deployment_manifest_atomic(app_root / "run" / "deployment-manifest.json", deployment)
-                print(json.dumps(asdict(deployment), ensure_ascii=False, sort_keys=True))
+                print(json.dumps(deployment_manifest_payload(deployment), ensure_ascii=False, sort_keys=True))
                 return 0
             raise ControllerError(f"unsupported command: {parsed.command}")
     except (

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import configparser
 import hashlib
 import json
 import os
@@ -24,6 +25,7 @@ _NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
 _COMMIT_PATTERN = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})")
 _SCHEMA_HEAD_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_]{0,127}")
 _OPAQUE_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:@+-]{0,127}")
+_GIT_TIMEOUT_SECONDS = 15.0
 
 
 class DeploymentManifestError(RuntimeError):
@@ -55,6 +57,7 @@ def _git(
     environment.update(
         {
             "GIT_NO_REPLACE_OBJECTS": "1",
+            "GIT_NO_LAZY_FETCH": "1",
             "GIT_OPTIONAL_LOCKS": "0",
             "GIT_TERMINAL_PROMPT": "0",
             "LC_ALL": "C",
@@ -62,13 +65,16 @@ def _git(
     )
     try:
         result = subprocess.run(
-            ["git", *arguments],
+            ["git", "-c", "core.fsmonitor=false", *arguments],
             cwd=app_root,
             env=environment,
             capture_output=True,
             text=True,
+            timeout=_GIT_TIMEOUT_SECONDS,
             check=False,
         )
+    except subprocess.TimeoutExpired as exc:
+        raise DeploymentManifestError("local Git deployment evidence command timed out") from exc
     except OSError as exc:
         raise DeploymentManifestError("git is unavailable for deployment verification") from exc
     if result.returncode not in allowed_returncodes:
@@ -85,6 +91,7 @@ def _canonical_project_root(app_root: Path) -> Path:
     if stat.S_ISLNK(root_stat.st_mode) or not stat.S_ISDIR(root_stat.st_mode):
         raise DeploymentManifestError("project root must be a real project-local directory, not a symlink")
 
+    _reject_promisor_or_partial_clone(absolute)
     top_level = _git(absolute, "rev-parse", "--show-toplevel").stdout.strip()
     try:
         discovered = Path(top_level).resolve(strict=True)
@@ -141,6 +148,46 @@ def _open_regular_file(app_root: Path, relative: Path) -> tuple[int, int]:
         os.close(directory_fd)
         raise DeploymentManifestError(f"project-local file must be regular: {relative}")
     return descriptor, directory_fd
+
+
+def _local_git_config(app_root: Path) -> configparser.RawConfigParser:
+    try:
+        descriptor, directory_fd = _open_regular_file(app_root, Path(".git/config"))
+    except DeploymentManifestError as exc:
+        raise DeploymentManifestError(f"local Git config is missing or unsafe: {exc}") from exc
+    body = bytearray()
+    try:
+        while chunk := os.read(descriptor, 64 * 1024):
+            body.extend(chunk)
+            if len(body) > 1024 * 1024:
+                raise DeploymentManifestError("local Git config exceeds the bounded deployment limit")
+    except OSError as exc:
+        raise DeploymentManifestError(f"local Git config cannot be read safely: {exc}") from exc
+    finally:
+        os.close(descriptor)
+        os.close(directory_fd)
+
+    parser = configparser.RawConfigParser(interpolation=None, strict=False)
+    try:
+        parser.read_string(body.decode("utf-8"))
+    except (UnicodeError, configparser.Error) as exc:
+        raise DeploymentManifestError(f"local Git config is invalid: {exc}") from exc
+    return parser
+
+
+def _reject_promisor_or_partial_clone(app_root: Path) -> None:
+    parser = _local_git_config(app_root)
+    for section in parser.sections():
+        lowered = section.casefold()
+        if lowered == "extensions" and parser.has_option(section, "partialclone"):
+            raise DeploymentManifestError("partial clone repositories are not valid deployment evidence")
+        if lowered.startswith('remote "') and parser.has_option(section, "promisor"):
+            try:
+                is_promisor = parser.getboolean(section, "promisor")
+            except ValueError as exc:
+                raise DeploymentManifestError("local Git promisor configuration is invalid") from exc
+            if is_promisor:
+                raise DeploymentManifestError("promisor repositories are not valid deployment evidence")
 
 
 def _uv_lock_sha256(app_root: Path) -> str:
@@ -267,9 +314,13 @@ def collect_deployment_manifest(
     """Fail closed on dirty or unpublished source and return whitelisted fields."""
 
     root = _canonical_project_root(app_root)
+    source_before = _source_commits(root, expected_deployment_commit)
     uv_lock_sha256 = _uv_lock_sha256(root)
     schema_head = _schema_head(root)
-    deployed, expected, origin_main = _source_commits(root, expected_deployment_commit)
+    source_after = _source_commits(root, expected_deployment_commit)
+    if source_after != source_before:
+        raise DeploymentManifestError("deployment source changed during manifest collection")
+    deployed, expected, origin_main = source_before
     operator = _validate_operator(actor)
     backup_id = _validate_optional_identifier(pre_upgrade_backup_id, label="pre-upgrade backup ID")
     receipt_id = _validate_optional_identifier(off_host_receipt_id, label="off-host receipt ID")
@@ -289,7 +340,7 @@ def collect_deployment_manifest(
     )
 
 
-def _manifest_payload(manifest: DeploymentManifest) -> dict[str, str | int | None]:
+def deployment_manifest_payload(manifest: DeploymentManifest) -> dict[str, str | int | None]:
     return {
         "deployed_commit": manifest.deployed_commit,
         "expected_deployment_commit": manifest.expected_deployment_commit,
@@ -312,7 +363,7 @@ def write_deployment_manifest_atomic(path: Path, manifest: DeploymentManifest) -
     target = Path(os.path.abspath(path))
     parent = target.parent
     temporary_name = f".{target.name}.{secrets.token_hex(12)}.tmp"
-    encoded = (json.dumps(_manifest_payload(manifest), ensure_ascii=False, sort_keys=True) + "\n").encode()
+    encoded = (json.dumps(deployment_manifest_payload(manifest), ensure_ascii=False, sort_keys=True) + "\n").encode()
     directory_fd = -1
     descriptor = -1
     temporary_created = False
