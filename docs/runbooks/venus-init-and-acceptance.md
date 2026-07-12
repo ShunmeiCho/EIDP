@@ -100,6 +100,11 @@ Its public operations are:
 
 ```text
 deploy/linux/eidpctl.sh db-bootstrap
+deploy/linux/eidpctl.sh import-excel <path>
+deploy/linux/eidpctl.sh manifest --actor <operator>
+deploy/linux/eidpctl.sh backup-package --backup-id <backup-id> --actor <operator>
+deploy/linux/eidpctl.sh backup-verify backups/<backup-id>
+deploy/linux/eidpctl.sh restore-drill backups/<backup-id> --target restore-drills/verified/<backup-id>
 deploy/linux/eidpctl.sh start
 deploy/linux/eidpctl.sh status
 deploy/linux/eidpctl.sh stop
@@ -126,18 +131,24 @@ responsibility.
 
 ### 1.6 Deployment manifest
 
-**PENDING:** each installation or upgrade writes
-`run/deployment-manifest.json` containing at least:
+**AVAILABLE — repository/local evidence only:** `eidpctl.sh manifest` validates
+the protected checkout and atomically writes `run/deployment-manifest.json`
+containing at least:
 
 - deployed commit and matching `origin/main` commit;
 - SHA-256 of `uv.lock`;
 - Alembic/schema head;
 - UTC deployment time and operator;
 - public internal URL, port and base path;
-- matching pre-upgrade backup manifest ID;
+- operator-supplied pre-upgrade backup ID when available; recording the ID
+  does not prove that it matches a finalized package;
 - off-host backup receipt ID when available.
 
 It must contain no secret values.
+
+The command and its local contracts are available. A manifest captured from an
+actual Venus installation remains **PENDING** and cannot be inferred from Mac
+test evidence.
 
 ## 2. Runtime And Failure Semantics
 
@@ -282,26 +293,37 @@ controller acquires the global write lock, rechecks every eligibility condition
 and blob digest against current DB state, and aborts on any change. Explicit
 operator confirmation is mandatory; there is no silent background delete.
 
-## 5. Backup, Restore And Rollback (**PENDING**)
+## 5. Backup, Restore And Rollback (**PARTLY AVAILABLE — LOCAL EVIDENCE ONLY**)
 
-1. Reuse the existing WAL checkpoint plus `VACUUM INTO` DB snapshot and wrap it
-   in a checksummed package under `backups/` containing audit/outbox data, source
-   PDFs, export artifacts and a manifest. The package/orchestration does not yet
-   exist. It must hold the global write lock while capturing the DB and file
-   inventory, write to staging, verify all checksums, then atomically publish a
-   finalized package. ICT pulls only packages carrying the finalized marker.
-2. ICT pulls the verified package to an approved **off-host** destination. An
-   outside-root copy on the same Venus disk is only intermediate protection and
-   is not disaster recovery.
-3. Restore drills unpack into an isolated disposable directory, verify hashes,
-   run SQLite `integrity_check`, start the target code against the restored copy
-   and compare expected evidence before any controlled cutover.
-4. Upgrade rollback always pairs the target code SHA with its matching
-   pre-upgrade DB backup and recorded schema head. Code-only rollback across a
-   migration is forbidden.
+1. **AVAILABLE — local package construction:** `eidpctl.sh backup-package`
+   holds the global data lock, reuses the WAL checkpoint plus `VACUUM INTO`,
+   captures the exact allowlisted DB/audit/source-PDF/export/deployment
+   inventory, keeps `data/master.xlsx` owner-read-only, verifies all digests and
+   atomically publishes a finalized package under `backups/`. `backup-verify`
+   revalidates finalized evidence without modifying it. These controls have
+   automated local evidence; they have not yet run on Venus.
+2. **ICT/PENDING — off-host disaster recovery:** ICT must pull a verified
+   finalized package to an approved different host/storage failure domain and
+   return a receipt bound to the package-manifest digest. An outside-root copy
+   on the same Venus disk is only intermediate protection and is not disaster
+   recovery.
+3. **AVAILABLE — isolated local restore drill:** `eidpctl.sh restore-drill`
+   rematerializes a finalized package only below `restore-drills/verified/`,
+   rechecks descriptor-bound package evidence and SQLite integrity/schema,
+   runs and stops a temporary loopback Streamlit process against restored data,
+   optionally checks export/action/audit evidence, and writes a secret-free
+   restore report. Idempotent retries never overwrite or repair an existing
+   conflicting target.
+4. **PENDING/PARTIAL — code/backup pairing:** tested primitives can record the
+   protected code SHA, `uv.lock`, schema head and an optional pre-upgrade backup
+   ID. The controller does not yet create or verify a matched code/package pair
+   as one upgrade transaction, so this is not rollback evidence. Code-only
+   rollback across a migration remains forbidden.
 
-A technical trial may prove local restore. Internally acceptable v1 requires at
-least one successful off-host restore proof.
+**PENDING — Venus/off-host proof:** no repository test proves Venus storage,
+off-host transfer, receipt custody or recovery after loss of the project root.
+Internally acceptable v1 still requires at least one successful off-host restore proof
+plus the Venus acceptance evidence in Section 6.
 
 ## 6. Acceptance Evidence
 

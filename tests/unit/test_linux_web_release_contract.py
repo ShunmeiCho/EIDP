@@ -97,6 +97,25 @@ def test_venus_runbook_marks_runtime_controller_available_without_changing_relea
     assert "**PENDING:** implement `deploy/linux/eidpctl.sh`" not in runbook
 
 
+def test_venus_runbook_marks_only_local_runtime_recovery_available() -> None:
+    runbook = Path("docs/runbooks/venus-init-and-acceptance.md").read_text(encoding="utf-8")
+
+    assert "Release forecast: **NOT_READY**" in runbook
+    assert "**AVAILABLE — repository/local evidence only:** `eidpctl.sh manifest`" in runbook
+    assert "## 5. Backup, Restore And Rollback (**PARTLY AVAILABLE — LOCAL EVIDENCE ONLY**)" in runbook
+    assert "**AVAILABLE — local package construction:**" in runbook
+    assert "**AVAILABLE — isolated local restore drill:**" in runbook
+    assert "deploy/linux/eidpctl.sh import-excel <path>" in runbook
+    assert "**ICT/PENDING — off-host disaster recovery:**" in runbook
+    assert "**PENDING/PARTIAL — code/backup pairing:**" in runbook
+    assert "**PENDING — Venus/off-host proof:**" in runbook
+    assert "Internally acceptable v1 still requires at least one successful off-host restore proof" in runbook
+    assert "matching pre-upgrade backup manifest ID" not in runbook
+    assert "**AVAILABLE — code/backup pairing mechanics:**" not in runbook
+    assert "package/orchestration does not yet exist" not in runbook
+    assert "## 5. Backup, Restore And Rollback (**AVAILABLE**)" not in runbook
+
+
 def test_reverse_proxy_doc_marks_runtime_url_settings_available_but_ict_pending() -> None:
     requirements = Path("deploy/linux/reverse-proxy-requirements.md").read_text(encoding="utf-8")
     design = Path("docs/superpowers/specs/2026-07-12-linux-web-v1-venus-design.md").read_text(encoding="utf-8")
