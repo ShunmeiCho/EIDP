@@ -1,8 +1,8 @@
 """Scrapling-backed fetcher adapters for school URL discovery.
 
 This module is intentionally optional. Importing it must not require the
-``scrapling`` package, because the Windows core ZIP remains HTTP-first and the
-browser-capable crawler is distributed as an add-on.
+``scrapling`` package, because the default HTTP-first path does not require a
+browser runtime.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ def scrapling_available() -> bool:
 
 
 def _ensure_playwright_browsers_path(*, app_root: Path | None = None) -> None:
-    """Point Playwright/Patchright at the extracted Windows add-on browser cache."""
+    """Keep optional browser downloads inside the authorized application root."""
 
     if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
         return
@@ -45,7 +45,7 @@ def _ensure_playwright_browsers_path(*, app_root: Path | None = None) -> None:
             return
         root = settings.app_root
 
-    browsers_dir = Path(root) / "playwright-addon" / "ms-playwright"
+    browsers_dir = Path(root) / ".cache" / "ms-playwright"
     if browsers_dir.is_dir():
         os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browsers_dir)
 
@@ -137,7 +137,7 @@ def _selector_first_text(page: Any, selector: str) -> str:
 def _load_scrapling_fetchers() -> Any:
     if not scrapling_available():
         raise ScraplingUnavailableError(
-            "Scrapling is not installed. Install the scraper-scrapling add-on to use school URL auto-crawl."
+            "Scrapling is not installed. Install the scraper-scrapling extra to use school URL auto-crawl."
         )
     return importlib.import_module("scrapling.fetchers")
 

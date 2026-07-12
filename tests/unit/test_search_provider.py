@@ -232,17 +232,15 @@ def test_external_command_provider_maps_json_results(monkeypatch: pytest.MonkeyP
     assert calls[0]["text"] is True
 
 
-def test_external_command_args_preserve_windows_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(module.os, "name", "nt")
-
+def test_external_command_args_preserve_quoted_linux_paths() -> None:
     args = module._external_command_args(  # noqa: SLF001 - command parsing is the behavior under test.
-        r'"C:\Program Files\EIDP\search.exe" --query {query_json} --count {count}',
+        "'/home/junming/EIDP/tools/search wrapper' --query {query_json} --count {count}",
         query="東京 情報公開",
         count=3,
     )
 
     assert args == [
-        r"C:\Program Files\EIDP\search.exe",
+        "/home/junming/EIDP/tools/search wrapper",
         "--query",
         '"東京 情報公開"',
         "--count",

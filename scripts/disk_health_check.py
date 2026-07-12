@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,7 +32,7 @@ class DiskTarget:
     cleanup_hint: str = ""
 
 
-def _mac_dev_targets() -> tuple[DiskTarget, ...]:
+def _local_dev_targets() -> tuple[DiskTarget, ...]:
     return (
         DiskTarget(
             "project_total",
@@ -43,25 +42,18 @@ def _mac_dev_targets() -> tuple[DiskTarget, ...]:
             cleanup_hint="Inspect large ignored dirs before pruning; do not delete protected data.",
         ),
         DiskTarget(
-            "dist",
-            Path("dist"),
-            gib(1),
-            gib(2),
-            cleanup_hint="python scripts/prune_release_artifacts.py --keep-latest 1 --keep-version 442",
-        ),
-        DiskTarget(
             "_temp",
             Path("_temp"),
             mib(200),
             mib(500),
-            cleanup_hint="python scripts/cleanup_local_artifacts.py --aggressive --keep-latest-retroactive-per-fy 0",
+            cleanup_hint="Review generated test artifacts and remove only confirmed disposable files.",
         ),
         DiskTarget(
             "logs",
             Path("logs"),
             mib(200),
             mib(500),
-            cleanup_hint="Review logs/ and keep recent release-gate and Stage 6 evidence only.",
+            cleanup_hint="Review logs/ and keep only recent Linux/Web release evidence.",
         ),
         DiskTarget(
             "data",
@@ -81,14 +73,14 @@ def _mac_dev_targets() -> tuple[DiskTarget, ...]:
     )
 
 
-def _operator_win_targets() -> tuple[DiskTarget, ...]:
+def _linux_server_targets() -> tuple[DiskTarget, ...]:
     return (
         DiskTarget(
             "app_root_total",
             Path("."),
             gib(10),
             gib(20),
-            cleanup_hint="Prune old staging ZIPs/deploy dirs; keep current plus one fallback.",
+            cleanup_hint="Review application data, logs, uploads, and generated exports below the project root.",
         ),
         DiskTarget(
             "data/pdfs",
@@ -130,8 +122,8 @@ def _operator_win_targets() -> tuple[DiskTarget, ...]:
 
 
 PROFILES = {
-    "mac-dev": _mac_dev_targets,
-    "operator-win": _operator_win_targets,
+    "linux-server": _linux_server_targets,
+    "local-dev": _local_dev_targets,
 }
 
 
@@ -204,7 +196,7 @@ def evaluate_profile(root: Path, profile: str) -> dict[str, Any]:
 
 
 def _default_profile() -> str:
-    return "operator-win" if os.name == "nt" else "mac-dev"
+    return "local-dev"
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:

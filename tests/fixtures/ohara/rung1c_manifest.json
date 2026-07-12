@@ -1,0 +1,309 @@
+{
+  "manifest_version": 1,
+  "corporation_name": "大原学園",
+  "fiscal_year": 2025,
+  "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+  "notes": "Rung 1c pins over the 11 enrolled 大原 candidates (+06 finding). URL authoritative for year+file; PDF body corroborates identity only; master.xlsx is EXPECTED-OUTPUT, never a source of PDF identity or values. Empirical dry-run over all 11: 7 clear the enrollment+intl hard gate (diff=0) and form the Rung 1c gated set; 06 is a documented master_expected_error; 09/10/12/13 are department_key_error (master short-form 学科 key vs PDF verbose 学科+コース key granularity divergence) carried as non-gate reconciliation. The 10-school target is NOT met by clean gate -- forcing it would require loosening the department key (over-wide merge), which the adversarial review forbids.",
+  "schools": [
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原簿記情報専門学校札幌校",
+      "school_name": "大原簿記情報専門学校札幌校",
+      "prefecture": "北海道",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-01-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原簿記情報専門学校札幌校", "note": "学校名 header; disambiguates from 北海道 siblings 02/03/05; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["obvious_match", "sibling_school_risk"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原簿記情報専門学校札幌校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 01. 北海道 大原 sibling cohort (01/02/03/05); pin binds 札幌校. Hard gate diff=0 (15 exact), 3 capacity cross-source deltas reconcile."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原法律公務員専門学校",
+      "school_name": "大原法律公務員専門学校",
+      "prefecture": "北海道",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-02-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-02-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-02-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原法律公務員専門学校", "note": "学校名 header; 北海道 school, name-distinct from 東京 12 大原法律専門学校; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["sibling_school_risk", "field_label_variation"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原法律公務員専門学校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 02. Name near-collision with 東京 12 大原法律専門学校 -> prefecture (北海道) discriminates. Hard gate diff=0 (6 exact), no reconciliation."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原医療福祉専門学校",
+      "school_name": "大原医療福祉専門学校",
+      "prefecture": "北海道",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-03-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-03-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-03-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原医療福祉専門学校", "note": "学校名 header; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["obvious_match", "sibling_school_risk"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原医療福祉専門学校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 03. Rung 1b carry-over. Hard gate diff=0 (10 exact), 2 capacity reconcile."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原公務員・医療事務・語学専門学校函館校",
+      "school_name": "大原公務員・医療事務・語学専門学校函館校",
+      "prefecture": "北海道",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-05-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-05-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-05-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原公務員・医療事務・語学専門学校函館校", "note": "学校名 header; 中点(・) in name exercises 中点-fold; 函館校 vs 札幌 siblings; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["sibling_school_risk", "field_label_variation"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原公務員・医療事務・語学専門学校函館校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 05. 中点(・) school-name + 函館校 sibling discrimination. Hard gate diff=0 (9 exact), no reconciliation."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原ビジネス公務員専門学校山形校",
+      "school_name": "大原ビジネス公務員専門学校山形校",
+      "prefecture": "山形県",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-08-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-08-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-08-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原ビジネス公務員専門学校山形校", "note": "学校名 header disambiguates 山形校 from sibling 盛岡校 (06); identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["sibling_school_risk", "field_label_variation", "taxonomy_cross_source"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原ビジネス公務員専門学校山形校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 08. Rung 1b carry-over. Hard gate diff=0 (11 exact); 公務員学科 1年制/2年制 filed 文化教養(master) vs 商業実務(PDF) -> 2 taxonomy reconciliations; 1 capacity reconcile."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "東京情報クリエイター工学院専門学校",
+      "school_name": "東京情報クリエイター工学院専門学校",
+      "prefecture": "東京都",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-15-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-15-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-15-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "東京情報クリエイター工学院専門学校", "note": "学校名 header; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["field_label_variation", "taxonomy_cross_source", "legacy_blank_rows"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "東京情報クリエイター工学院専門学校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 15. Hard gate diff=0 (12 exact); 情報処理/クリエイター 学科 filed 工業(master) vs 工業関係(PDF) -> 4 taxonomy reconciliations; 1 legacy blank-enrollment row skipped (一年制専攻)."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "東京アニメーター学院専門学校",
+      "school_name": "東京アニメーター学院専門学校",
+      "prefecture": "東京都",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-16-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-16-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-16-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "東京アニメーター学院専門学校", "note": "学校名 header; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["field_label_variation", "legacy_blank_rows"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "東京アニメーター学院専門学校", "fiscal_year": 2025},
+      "status": "pinned",
+      "notes": "code 16. Rung 1b carry-over. Hard gate diff=0 (9 exact), non-zero intl; 2 legacy blank-enrollment rows skipped (漫画家プロ養成 / イラストレーション)."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原ビジネス公務員専門学校盛岡校",
+      "school_name": "大原ビジネス公務員専門学校盛岡校",
+      "prefecture": "岩手県",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-06-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-06-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-06-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原ビジネス公務員専門学校盛岡校", "note": "学校名 header disambiguates 盛岡校 from sibling 山形校 (08); identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["sibling_school_risk"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原ビジネス公務員専門学校盛岡校", "fiscal_year": 2025},
+      "status": "pinned_master_finding",
+      "notes": "code 06. NOT a clean gate: 公務員2年制 在籍 master=91 vs official PDF raw='92人' (Δ+1) is a master_expected_error (extractor proven correct; master red-line, not editable). 11/12 exact proves pin binds 盛岡校 (no cross-match with 山形校). Owner master-correction item; kept OUT of the clean gate."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原法律専門学校",
+      "school_name": "大原法律専門学校",
+      "prefecture": "東京都",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-12-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-12-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-12-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原法律専門学校", "note": "学校名 header; 東京 school, name-distinct from 北海道 02; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["department_key_granularity"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原法律専門学校", "fiscal_year": 2025},
+      "status": "department_key_error",
+      "notes": "code 12. NOT gated: 15 missing + 15 unexpected, but hard-gate VALUES match pairwise (法律行政 88/61/34 + 法務ビジネス). Pure key granularity divergence: master short-form 法律行政学科(初級事務系) vs PDF verbose 法律行政学科2年制公務員初級事務系. department_key_error -> needs an alignment fold OR owner mapping; NOT fixable by loosening the loose key (would over-merge). Cleanest reach-10 candidate."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原医療秘書福祉保育専門学校",
+      "school_name": "大原医療秘書福祉保育専門学校",
+      "prefecture": "東京都",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-13-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-13-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-13-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "大原医療秘書福祉保育専門学校", "note": "学校名 header; identity corroboration only"}
+        ]
+      },
+      "risk_flags": ["department_key_granularity", "legacy_blank_rows"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "大原医療秘書福祉保育専門学校", "fiscal_year": 2025},
+      "status": "department_key_error",
+      "notes": "code 13. NOT gated: 9 missing + 9 unexpected, hard-gate VALUES match pairwise (こども保育 34/13, 医療事務 25). Master こども保育学科(保育士) vs PDF こども保育学科2年制保育士. department_key_error; 2 legacy blank rows also skipped."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "山形スポーツ医療福祉専門学校 ",
+      "school_name": "山形スポーツ医療福祉専門学校 ",
+      "prefecture": "山形県",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-09-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-09-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-09-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "山形スポーツ医療福祉専門学校", "note": "学校名 header; master school_name carries a trailing space (kept verbatim for exact filter)"}
+        ]
+      },
+      "risk_flags": ["department_key_granularity", "field_label_variation"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "山形スポーツ医療福祉専門学校 ", "fiscal_year": 2025},
+      "status": "department_key_error",
+      "notes": "code 09. NOT gated: mixed department_key_error (経理本科2年制 vs 経理本科2年制学科(情報)) PLUS a field/extractor gap (3 depts intl master=0 vs PDF=null). master school_name has a trailing space -> normalized_equal match."
+    },
+    {
+      "school_key": "大原学園",
+      "campus_key": "山形情報ITクリエイター専門学校",
+      "school_name": "山形情報ITクリエイター専門学校",
+      "prefecture": "山形県",
+      "fiscal_year": 2025,
+      "pdf_paths": ["pdf/2025-1-10-01-5.pdf"],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-10-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {"kind": "source_page", "value": "https://www.o-hara.ac.jp/about/joho/", "note": "大原 disclosure index"},
+          {"kind": "pdf_url", "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-10-01-5.pdf", "note": "URL selects the file"},
+          {"kind": "url_year_hint", "value": "2025", "note": "fiscal year encoded in the URL/path"},
+          {"kind": "pdf_text_school_hint", "value": "山形情報IT クリエイター専門学校", "note": "学校名 header; half-width IT + space vs master full-width -> normalized_equal"}
+        ]
+      },
+      "risk_flags": ["department_key_granularity"],
+      "expected_master_filter": {"corporation_name": "大原学園", "school_name": "山形情報ITクリエイター専門学校", "fiscal_year": 2025},
+      "status": "department_key_error",
+      "notes": "code 10. NOT gated: ambiguous_key=3 -- master short 情報IT over-collapses PDF 情報IT学科(2年制)/(3年制). The loose key is TOO aggressive here (opposite of 12/13); needs a LESS-collapsing key, not a looser one. department_key_error."
+    }
+  ]
+}

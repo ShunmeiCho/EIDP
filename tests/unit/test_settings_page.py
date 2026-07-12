@@ -136,7 +136,7 @@ def test_save_operator_settings_writes_runtime_variables(tmp_path: Path, monkeyp
             ocr_auto_enable="off",
             ocr_min_cpus=4,
             ocr_min_free_ram_mb=8192,
-            tesseract_bin="C:/EIDP/tesseract.exe",
+            tesseract_bin="/home/junming/EIDP/ocr/tesseract/bin/tesseract",
             ocr_provider="tesseract",
             ocr_device="cpu",
             search_provider="serper",

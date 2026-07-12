@@ -3,6 +3,13 @@
 This board keeps post-v1 work assigned to a release train. It is not a promise
 that all items are ready to implement.
 
+> **2026-07-11 track consolidation.** The three former tracks are collapsed
+> into Linux/Web-only `main`. The product direction is accepted; release still
+> requires served-app evidence. See
+> `docs/reports/2026-07-11-owner-v1-track-decision-brief.md` and
+> `docs/decisions/ADR-2026-07-linux-web-pivot.md`. The `C1`–`C3` rows below are
+> v1-pivot-track items tracked here for visibility.
+
 | ID | Task | Phase | Priority | Entry condition | Exit condition | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | P1 | Patch operator-facing wording drift | v1.0.x patch | P1 | v1 tag or RC scope frozen | Current UI/docs no longer use dangerous old labels as current baseline | planned |
@@ -22,6 +29,9 @@ that all items are ready to implement.
 | U2 | Build school queue ViewModel | v1.5 operator console | P1 | `current_lane` and labels stable | queue rows show blocker and next action consistently | planned |
 | V2U1 | Create university pilot gold set | v2.0 university expansion | P2 | vocational-school v1 stable cycle complete | 50 university samples classified with parser notes | blocked |
 | V2P1 | Evaluate PostgreSQL and multi-operator architecture | v2.x multi-user/cloud | P3 | real multi-operator requirement exists | decision brief approved by owner | research |
+| C1 | Consolidate Linux/Web as single `main` | v1 (pivot) | P0 | direction decided 2026-07-11 | `main` converged; Windows assets and merged branches/worktrees removed | in-progress (branch cleanup pending) |
+| C2 | Define Linux/Web served-app release gate | v1 (pivot) | P0 | pivot ADR accepted | gate documented and enforced in CI; Venus/LAN evidence collected | in-progress (deployment evidence pending) |
+| C3 | Ohara reach-10 vs accept-7 decision | v1 (pivot) | P1 | Rung 1c 7/7 clean gate green | owner authorises scoped reach-10 fold, or accepts the honest 7-school clean gate | needs owner decision |
 
 ## Board Rules
 

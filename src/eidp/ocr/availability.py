@@ -29,7 +29,7 @@ from eidp.ocr.tesseract import (
 
 @dataclass(frozen=True)
 class OcrAvailability:
-    """Snapshot of OCR readiness on the operator PC."""
+    """Snapshot of OCR readiness on the Linux application server."""
 
     binary_path: Path | None
     tessdata_dir: Path | None
@@ -40,8 +40,8 @@ class OcrAvailability:
     def can_run(self) -> bool:
         """True iff the operator can press an OCR button and expect a
         useful result. Requires binary + jpn data; auto_enabled is
-        independent — operator can still manually OCR a single PDF on
-        a low-spec PC."""
+        independent — a reviewer can still manually OCR a single PDF
+        when automatic OCR is disabled."""
         return self.binary_path is not None and self.has_jpn_traineddata
 
     @property
@@ -79,21 +79,21 @@ def availability_banner_text(detection: OcrAvailability) -> str:
     """One-line operator-facing status. Japanese.
 
     Wording is tuned for the manual-entry page header — short, factual,
-    no emoji (operator setting may not render them on cp932 console).
+    no emoji.
     """
     if not detection.binary_path:
-        return "OCR add-on 未インストール — 画像 PDF は手入力で対応してください。"
+        return "OCR runtime 未インストール — 画像 PDF は手入力で対応してください。"
     if not detection.has_jpn_traineddata:
         return (
             "Tesseract は導入済みですが jpn.traineddata が見つかりません。"
-            " add-on ZIP の再展開を確認してください。"
+            " サーバー上の OCR runtime を確認してください。"
         )
     if not detection.auto_enabled:
         return (
-            "OCR add-on 利用可能。自動実行は OFF（CPU/メモリしきい値未満）— "
+            "OCR runtime 利用可能。自動実行は OFF（CPU/メモリしきい値未満）— "
             "個別 PDF ボタンで手動 OCR は可能です。"
         )
-    return "OCR add-on 利用可能（自動実行 ON）。"
+    return "OCR runtime 利用可能（自動実行 ON）。"
 
 
 def availability_banner_severity(detection: OcrAvailability) -> str:
@@ -102,7 +102,7 @@ def availability_banner_severity(detection: OcrAvailability) -> str:
     vs st.info() based on this so the operator's eye lands on the
     relevant one first."""
     if not detection.binary_path:
-        return "info"  # not having OCR is not an error — it's optional add-on
+        return "info"  # OCR is optional for text-based PDFs
     if not detection.has_jpn_traineddata:
         return "warning"
     if not detection.auto_enabled:

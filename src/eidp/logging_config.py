@@ -108,7 +108,7 @@ def configure_logging(
 
     Logs are emitted as JSON lines to ``logs/eidp.jsonl`` with a 10 MB x 12
     rotating file policy. A stderr handler uses the same JSON renderer so
-    ``weekly_run.bat`` still captures structured events in its per-day log.
+    scheduled service runners still capture structured events in their logs.
     """
     global _configured_signature
 

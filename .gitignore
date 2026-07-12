@@ -13,15 +13,14 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+.cache/
+.home/
 venv/
 *.egg-info/
 dist
 dist/
 build/
 
-# Windows packaging build artifacts (Sprint 8.7)
-runtime/
-.runtime-cache/
 .coverage
 htmlcov/
 
@@ -31,6 +30,7 @@ htmlcov/
 .omc/
 .playwright-mcp/
 .codegraph/
+.worktrees/
 .understand-anything/
 _temp/
 logs
@@ -44,8 +44,10 @@ logs/
 # Data (PDFs, exports, large binaries — not source)
 data/pdfs/
 data/.lock
+data/.lock.meta
 data/eidp.sqlite3
 data/test_*.sqlite3*
+data/web-intake/
 data/prefecture-aggregators/artifacts/
 output/
 *.xlsx

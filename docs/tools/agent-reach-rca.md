@@ -13,7 +13,7 @@ chain.
 
 ## Disallowed Use
 
-- Production dependency in the Windows operator package.
+- Production dependency in the Linux/Web service.
 - Direct writes to `school_site`, `document`, `department_yearly`,
   `support_recipient`, or `school_fiscal_year_status`.
 - Operator UI feature.

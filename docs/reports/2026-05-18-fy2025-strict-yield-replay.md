@@ -1,7 +1,7 @@
 # FY2025 Strict Yield Replay
 
 Date: 2026-05-18
-Scope: Mac-side only. No Windows SSH, no active-lane promotion.
+Scope: development replay only; no production data promotion.
 
 ## Purpose
 
@@ -347,9 +347,8 @@ After the related local code changes and this report:
 uv run pytest -q
 uv run mypy src
 uv run ruff check src/eidp/review/_pages/school_year_tasks.py \
-  scripts/validate_windows_install.py scripts/ship_gate_contract.py \
-  tests/unit/test_review_school_year_tasks.py \
-  tests/unit/test_windows_install_validator.py tests/unit/test_ship_gate_contract.py
+  scripts/ship_gate_contract.py tests/unit/test_review_school_year_tasks.py \
+  tests/unit/test_ship_gate_contract.py
 git diff --check
 ```
 

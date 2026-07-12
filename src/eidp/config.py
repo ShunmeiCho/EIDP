@@ -1,18 +1,12 @@
 """Application configuration via pydantic-settings.
 
-Sprint 8.5.a — application root resolution that survives Windows
-deployment.
-
-The repo originally defaulted to a relative ``./data`` and Postgres URL,
-which assumes a developer-style cwd. On a Windows operator PC the cwd
-is whatever Explorer / Task Scheduler / a ``.bat`` decides, so relative
-paths and a Postgres default both fail.
+Application-root resolution keeps Linux service data anchored to an explicit
+deployment directory instead of the service manager's working directory.
 
 Resolution order for the application root (used to anchor data_dir,
 default SQLite path, etc.) — first match wins:
 
-1. ``EIDP_APP_ROOT`` environment variable (set by ``.bat`` launchers
-   via ``set "EIDP_APP_ROOT=%~dp0\\.."``).
+1. ``EIDP_APP_ROOT`` environment variable (set by the Linux launcher/service).
 2. The current working directory if it looks like the app root
    (heuristic: a ``data`` folder or ``.env`` is present beside it).
 3. ``Path(__file__).resolve().parents[2]`` — the repo root when running
@@ -20,9 +14,8 @@ default SQLite path, etc.) — first match wins:
    installed wheel ``__file__`` lives under ``site-packages`` and that
    would not be a usable application root.
 
-The default ``database_url`` resolves to a SQLite file under the
-resolved app root unless the user sets ``EIDP_DATABASE_URL`` explicitly
-(absolute Postgres URL on dev, absolute SQLite path on Win).
+The default ``database_url`` resolves to a SQLite file under the resolved app
+root unless ``EIDP_DATABASE_URL`` is set explicitly.
 """
 
 from __future__ import annotations
@@ -70,8 +63,8 @@ def resolve_app_root(
         return here
 
     # Last resort — repo source layout: src/eidp/config.py → parents[2] = repo root.
-    # Installed wheels must not fall back here: otherwise Task Scheduler runs
-    # from C:\Windows\System32 can write data beside site-packages.
+    # Installed wheels must not fall back here: a service with an arbitrary cwd
+    # must never write application data beside site-packages.
     source_file = module_file if module_file is not None else Path(__file__)
     if _is_installed_module_path(source_file):
         raise RuntimeError("EIDP_APP_ROOT required when running from installed wheel")

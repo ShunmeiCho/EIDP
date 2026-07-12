@@ -1,9 +1,8 @@
 """Run school website URL auto-discovery and persist outcomes.
 
-The pipeline is the packaged entrypoint used by both the CLI and the Windows
-bootstrap script. It deliberately keeps the batch bounded and uses optional
-Scrapling adapters so a core install can skip cleanly when the add-on is not
-present.
+The pipeline is used by both the CLI and the Linux/Web bootstrap path. It keeps
+the batch bounded and uses optional Scrapling adapters so a core install can
+skip cleanly when the extra is not present.
 """
 
 from __future__ import annotations

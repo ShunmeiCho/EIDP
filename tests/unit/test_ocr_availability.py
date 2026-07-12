@@ -15,20 +15,19 @@ from eidp.ocr.availability import (
 from eidp.ocr.runtime_detect import RuntimeProfile
 
 # ---------------------------------------------------------------------------
-# Fixture: build a fake operator install layout
+# Fixture: build a fake project-local Linux runtime
 # ---------------------------------------------------------------------------
 
 
-def _make_addon(tmp_path: Path, *, binary: bool, jpn: bool) -> Path:
-    """Build an ``ocr-addon`` directory under ``tmp_path``. Returns the
-    parent (the simulated app root)."""
-    addon = tmp_path / "ocr-addon"
+def _make_runtime(tmp_path: Path, *, binary: bool, jpn: bool) -> Path:
+    """Build an optional OCR runtime under ``tmp_path`` and return the app root."""
+    runtime = tmp_path / "ocr"
     if binary:
-        bin_dir = addon / "tesseract"
+        bin_dir = runtime / "tesseract" / "bin"
         bin_dir.mkdir(parents=True)
-        (bin_dir / "tesseract.exe").write_bytes(b"PE")
+        (bin_dir / "tesseract").write_bytes(b"ELF")
     if jpn:
-        td = addon / "tessdata"
+        td = runtime / "tessdata"
         td.mkdir(parents=True)
         (td / "jpn.traineddata").write_bytes(b"x")
     return tmp_path
@@ -41,13 +40,13 @@ def _make_addon(tmp_path: Path, *, binary: bool, jpn: bool) -> Path:
 
 def test_detect_full_setup(tmp_path: Path):
     """Binary + jpn data + strong hardware → fully ready."""
-    app_root = _make_addon(tmp_path, binary=True, jpn=True)
+    app_root = _make_runtime(tmp_path, binary=True, jpn=True)
     profile = RuntimeProfile(cpu_count=8, free_ram_mb=16 * 1024)
     detection = detect_ocr_availability(
         app_root=app_root, env={}, profile=profile,
     )
     assert detection.binary_path is not None
-    assert detection.binary_path.name == "tesseract.exe"
+    assert detection.binary_path.name == "tesseract"
     assert detection.tessdata_dir is not None
     assert detection.has_jpn_traineddata is True
     assert detection.auto_enabled is True
@@ -56,7 +55,7 @@ def test_detect_full_setup(tmp_path: Path):
 
 
 def test_detect_no_binary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """No add-on directory and no system tesseract → can_run False."""
+    """No project runtime and no system tesseract means can_run is false."""
     monkeypatch.setattr("eidp.ocr.tesseract.shutil.which", lambda _name: None)
     detection = detect_ocr_availability(
         app_root=tmp_path, env={},
@@ -69,8 +68,8 @@ def test_detect_no_binary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 def test_detect_binary_but_no_jpn(tmp_path: Path):
     """Tesseract installed, jpn missing → can_run False with a warning
-    severity. Operator must re-extract the add-on ZIP."""
-    app_root = _make_addon(tmp_path, binary=True, jpn=False)
+    severity. The server runtime needs its language data restored."""
+    app_root = _make_runtime(tmp_path, binary=True, jpn=False)
     detection = detect_ocr_availability(
         app_root=app_root, env={},
         profile=RuntimeProfile(cpu_count=8, free_ram_mb=16 * 1024),
@@ -81,10 +80,10 @@ def test_detect_binary_but_no_jpn(tmp_path: Path):
 
 
 def test_detect_full_install_but_low_spec_pc(tmp_path: Path):
-    """Add-on installed but hardware below threshold → can_run True
-    (operator can manually trigger), auto_can_run False (weekly run
+    """OCR runtime installed but hardware below threshold means can_run True
+    (a reviewer can manually trigger), auto_can_run False (weekly run
     won't auto-OCR)."""
-    app_root = _make_addon(tmp_path, binary=True, jpn=True)
+    app_root = _make_runtime(tmp_path, binary=True, jpn=True)
     detection = detect_ocr_availability(
         app_root=app_root, env={},
         profile=RuntimeProfile(cpu_count=1, free_ram_mb=2 * 1024),
@@ -95,7 +94,7 @@ def test_detect_full_install_but_low_spec_pc(tmp_path: Path):
 
 
 def test_detect_env_force_off_overrides_strong_hardware(tmp_path: Path):
-    app_root = _make_addon(tmp_path, binary=True, jpn=True)
+    app_root = _make_runtime(tmp_path, binary=True, jpn=True)
     detection = detect_ocr_availability(
         app_root=app_root,
         env={"EIDP_OCR_AUTO_ENABLE": "off"},
@@ -111,9 +110,9 @@ def test_tessdata_dir_without_jpn_marks_has_jpn_false(tmp_path: Path):
     """``locate_tessdata`` may return a directory that's missing
     jpn.traineddata. Owner P2 from 8.6.c review — handle that case
     explicitly in availability."""
-    app_root = _make_addon(tmp_path, binary=True, jpn=False)
+    app_root = _make_runtime(tmp_path, binary=True, jpn=False)
     # Manually create the tessdata dir without jpn.traineddata.
-    (app_root / "ocr-addon" / "tessdata").mkdir(parents=True)
+    (app_root / "ocr" / "tessdata").mkdir(parents=True)
     detection = detect_ocr_availability(
         app_root=app_root, env={},
         profile=RuntimeProfile(cpu_count=8, free_ram_mb=16 * 1024),

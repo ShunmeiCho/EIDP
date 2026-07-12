@@ -10,9 +10,9 @@ we have a confirmed artifact URL, then
 downloads each artifact under ``data/prefecture-aggregators/artifacts/``
 using the same idiomatic name the CLI expects.
 
-The Windows ZIP ships only seed.csv, not downloaded artifacts. The operator
-bootstrap downloads current prefecture artifacts at runtime so the app is not
-frozen to the ZIP build date when prefectures publish a new annual list.
+The repository ships only seed.csv, not downloaded artifacts. The service
+downloads current prefecture artifacts at runtime so it is not frozen to a
+source checkout date when prefectures publish a new annual list.
 """
 
 from __future__ import annotations

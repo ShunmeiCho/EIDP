@@ -30,13 +30,13 @@ def test_paren_tracks_splits_lumped_dept_name() -> None:
     assert tracks == ["情報処理", "WEB開発", "AI"]
 
 
-def test_suffix_swap_学科_to_科() -> None:
+def test_suffix_swap_gakka_to_ka() -> None:
     v = _strip_suffix_pair("プロミュージシャン学科")
     assert "プロミュージシャン学科" in v
     assert "プロミュージシャン科" in v
 
 
-def test_alias_match_suffix_swap_学科_to_科() -> None:
+def test_alias_match_suffix_swap_gakka_to_ka() -> None:
     """TSM real case: template 'プロミュージシャン学科' → DB 'プロミュージシャン科'"""
     depts = [_dept(521, "プロミュージシャン科（昼一）"),
              _dept(522, "プロミュージシャン科（昼二）")]

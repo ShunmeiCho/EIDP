@@ -44,7 +44,6 @@ from eidp.review._pages.school_year_tasks import (
     operator_build_label,
     read_bootstrap_progress,
     read_weekly_last_run,
-    read_weekly_task_registration_warning,
     school_task_source_chain_csv,
     school_task_summary,
     school_type_from_filter_label,
@@ -66,7 +65,6 @@ from eidp.review._pages.school_year_tasks import (
     url_search_config_summary,
     url_submission_prefill_for_row,
     weekly_command,
-    weekly_task_registration_warning_path,
 )
 
 
@@ -1125,16 +1123,6 @@ def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
     assert any("Excel出力可能: 30.0%" in caption for caption in captions)
     assert any("broad発見: 70.0%" in caption for caption in captions)
     assert any("レビュー判定: pass" in caption for caption in captions)
-
-
-def test_weekly_task_registration_warning_reads_setup_marker(tmp_path) -> None:
-    path = weekly_task_registration_warning_path(tmp_path)
-    path.parent.mkdir(parents=True)
-    path.write_text("Task Scheduler registration failed during setup.\n", encoding="utf-8")
-
-    assert path == tmp_path / "data" / "weekly-task-registration-warning.txt"
-    assert read_weekly_task_registration_warning(tmp_path) == "Task Scheduler registration failed during setup."
-    assert read_weekly_task_registration_warning(tmp_path / "missing") is None
 
 
 def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_context() -> None:

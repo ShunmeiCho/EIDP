@@ -1,6 +1,6 @@
 """Anti-detection helpers for school-website crawling (v104+).
 
-Layered defenses so the operator's single Windows PC does not look like
+Layered defenses so the shared Linux service does not look like
 an aggressive bot to school websites or to public SERP endpoints.
 
 Layers

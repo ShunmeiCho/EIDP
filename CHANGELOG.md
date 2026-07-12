@@ -2,7 +2,25 @@
 
 All notable EIDP changes are tracked here for release administration.
 
-## 1.0.0rc1 - 2026-05-20
+## Unreleased - 2026-07-11
+
+### Changed
+
+- Consolidated the Ohara extraction core and Streamlit workflow into the sole
+  Linux/Web `main` product line.
+- Retired desktop runtime, ZIP/batch packaging, and Stage 6 release machinery;
+  the v548 baseline remains available through Git history and the
+  `windows-v548-fallback` audit tag.
+- Added a Venus-safe launcher contract rooted at `/home/junming/EIDP`, a
+  project-local virtual environment, POSIX locking for Web writes, and
+  served-app release gates.
+
+### Release Status
+
+- `NOT_READY` until Venus deployment, intranet browser reachability,
+  backup/restore, and served-app acceptance evidence are complete.
+
+## 1.0.0rc1 - 2026-05-20 (retired desktop baseline)
 
 ### Added
 
@@ -17,4 +35,5 @@ All notable EIDP changes are tracked here for release administration.
 
 ### Release Status
 
-- Code and package gates are ready for owner review, but v1.0 GA remains blocked until owner real-cycle Stage 6 evidence and an approved `publication_lag` exception, or a passing strict FY2026/R8 production-scale run, are available.
+- This historical candidate was never promoted to GA and is no longer the
+  active product definition.

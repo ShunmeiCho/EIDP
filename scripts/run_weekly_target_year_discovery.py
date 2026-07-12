@@ -1,8 +1,7 @@
 """Weekly target-year rediscovery runner.
 
-This is the Windows Task Scheduler-facing production entrypoint for
-Sprint 8. It targets schools that have a crawlable school_site but no
-current-FY target PDF, then runs:
+This support-only runner targets schools that have a crawlable ``school_site``
+but no current-FY target PDF, then runs:
 
 1. PDF rediscovery for the selected school_site methods.
 2. Ingestion only for documents created during this run.
@@ -82,7 +81,7 @@ URL_DISCOVERY_SEED_CSV_NAME = "discovered-urls-50.csv"
 
 @dataclass(frozen=True)
 class WeeklyPaths:
-    """Filesystem contract for the Windows operator ZIP."""
+    """Filesystem contract anchored to the configured application root."""
 
     app_root: Path
     storage_dir: Path
@@ -96,9 +95,8 @@ class WeeklyPaths:
 def resolve_weekly_paths(app_root: Path | None = None) -> WeeklyPaths:
     """Resolve runner paths from the app root, never from ambient cwd.
 
-    ``weekly_run.bat`` sets ``EIDP_APP_ROOT`` before launching Python; in
-    tests we pass an explicit ``app_root``. All defaults match the
-    Windows ZIP layout.
+    The Linux launcher/service sets ``EIDP_APP_ROOT``; tests pass an explicit
+    ``app_root``. No path depends on the ambient working directory.
     """
     root = (app_root or settings.app_root).resolve()
     data_dir = root / "data"
@@ -225,14 +223,12 @@ def _prune_matching_files(directory: Path, pattern: str, *, keep: int) -> tuple[
 def prune_run_logs(logs_dir: Path, *, keep: int = 12) -> tuple[list[Path], list[tuple[Path, str]]]:
     """Keep only the latest ``run-*.log`` files by filename.
 
-    ``weekly_run.bat`` writes one log per run. The operator PC is a
-    single-user laptop/desktop, so a simple filename ringbuffer is enough
-    and avoids unbounded growth.
+    The service writes one log per run. A simple filename ring buffer avoids
+    unbounded growth.
 
     Returns ``(removed, failed)`` where ``failed`` carries (path, reason)
     pairs so the caller can surface stuck files (per CLAUDE.md no-silent-
-    failure rule). Common cause on Windows is the file still being held
-    open by a viewer; the operator should close it and rerun.
+    failure rule). A common cause is a file still held open by another process.
     """
     return _prune_matching_files(logs_dir, "run-*.log", keep=keep)
 
@@ -257,9 +253,9 @@ def apply_weekly_url_sources(
 ) -> dict[str, int]:
     """Apply checked-in URL sources before weekly school selection.
 
-    The Windows weekly runner is the production entrypoint, so it must use the
-    same reusable seed CSV and corporation/school-domain overrides as the
-    bootstrap flow. The imports are idempotent at ``SchoolSite`` level.
+    The scheduled Linux runner must use the same reusable seed CSV and
+    corporation/school-domain overrides as the bootstrap flow. The imports are
+    idempotent at ``SchoolSite`` level.
     """
 
     active_methods = set(methods or DEFAULT_METHODS)
@@ -414,7 +410,7 @@ def count_no_crawlable_url_schools(
     """Count active schools the weekly runner cannot crawl yet.
 
     ``target_missing_school_count`` only includes schools with a crawlable
-    SchoolSite. A fresh Windows setup has master schools but no URLs, so this
+    SchoolSite. A fresh server database has master schools but no URLs, so this
     count explains why the runner has nothing to crawl until the UI initial
     acquisition flow seeds SchoolSite rows.
 

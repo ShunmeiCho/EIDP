@@ -18,27 +18,25 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Postgres backing — only needed on developer Mac / Linux. Windows
-# operator deployment uses SQLite via eidp.db.sqlite_bootstrap.
+# Optional PostgreSQL backing. Linux/Web v1 continues to use SQLite until the
+# multi-operator concurrency trigger is approved.
 postgres = [
     "psycopg2-binary>=2.9,<3.0",
 ]
-# HTTP-only scraper extra — what the Windows core ZIP installs by
-# default. Pure-Python wheels, no Chromium required.
+# HTTP-only scraper extra. Pure Python; no Chromium required.
 scraper-basic = [
     "httpx>=0.28,<1.0",
     "tenacity>=9.0,<10.0",
     "ddgs>=8.0",
 ]
-# Playwright + Chromium — distributed as an optional add-on ZIP for
-# Windows. Mac / Linux dev installs both extras together.
+# Optional Playwright + Chromium support for rendered pages.
 scraper-playwright = [
     "scrapy>=2.14,<3.0",
     "playwright>=1.58",
 ]
 # Scrapling fetchers — optional add-on used by the v104 school URL
-# auto-crawl fallback. Kept outside the Windows core ZIP so operators can
-# still run the official-index path without Chromium/browser dependencies.
+# auto-crawl fallback. Kept optional so the official-index path does not need
+# Chromium/browser dependencies.
 scraper-scrapling = [
     "scrapling[fetchers]>=0.4.7,<1.0",
 ]
@@ -58,7 +56,6 @@ ocr = [
     "paddlepaddle>=3.0",
 ]
 dev = [
-    "pip>=24.0",
     "pytest>=8.0",
     "pytest-cov>=6.0",
     "ruff>=0.11",
@@ -79,6 +76,28 @@ packages = ["src/eidp"]
 target-version = "py312"
 line-length = 120
 src = ["src"]
+# Generated migrations and archived one-off research utilities retain their
+# historical formatting. Product code, tests, and all new scripts remain in
+# the default `ruff check .` surface.
+extend-exclude = [
+    "migrations",
+    "scripts/debug",
+    "scripts/analyze_nkz_pdf_embed.py",
+    "scripts/analyze_nkz_subpages.py",
+    "scripts/analyze_reference_urls.py",
+    "scripts/analyze_target_institutions.py",
+    "scripts/analyze_zero_pdf_sites.py",
+    "scripts/dept_unmatched_resolver.py",
+    "scripts/generate_briefing_pdf.py",
+    "scripts/generate_report.py",
+    "scripts/http_verify_plan_urls.py",
+    "scripts/investigate_unmatched.py",
+    "scripts/jikei_url_rediscovery.py",
+    "scripts/match_schools.py",
+    "scripts/md_to_pdf.py",
+    "scripts/rescue_suspect_urls.py",
+    "scripts/school_missing_resolver.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]

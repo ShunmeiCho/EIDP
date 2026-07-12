@@ -530,7 +530,7 @@ def test_bootstrap_is_idempotent(sqlite_engine):
 def test_bootstrap_refuses_to_recreate_missing_main_db_when_wal_sidecar_exists(tmp_path: Path):
     """A missing main SQLite file with WAL/SHM sidecars is not a clean install.
 
-    On Windows this can happen when Defender or another tool quarantines
+    This can happen when an external process quarantines or removes
     ``eidp.sqlite3`` while leaving sidecars behind. Bootstrapping must stop
     instead of silently creating an empty DB next to stale sidecars.
     """

@@ -504,9 +504,7 @@ def test_snapshot_reports_preserves_target_vs_any_current_fy_distinction() -> No
 
 
 def test_resolve_weekly_paths_anchors_to_app_root(tmp_path: Path) -> None:
-    """Sprint 8.7.a — Windows Task Scheduler can invoke the .bat from an
-    arbitrary cwd. The Python runner must derive all operational paths from
-    the app root, not from process cwd."""
+    """The service may start from any cwd, so all paths derive from app root."""
 
     paths = resolve_weekly_paths(tmp_path)
 
@@ -803,7 +801,7 @@ def test_prune_run_logs_surfaces_unlink_failures(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Owner-banned silent failure: when ``unlink`` fails (e.g. log file
-    held open by Notepad on Windows) the function must report the path
+    held open by another process) the function must report the path
     + reason so the runner can fold it into its JSON output."""
     logs = tmp_path / "logs"
     logs.mkdir()
@@ -855,7 +853,7 @@ def test_prune_run_artifacts_keeps_latest_twelve_per_artifact_kind(tmp_path: Pat
 
 def test_run_weekly_respects_shared_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """If UI/manual work is holding data/.lock, the weekly runner must not
-    proceed. This is the Windows single-user exclusion contract."""
+    proceed. This is the single-writer exclusion contract."""
 
     session = _session()
     monkeypatch.setattr(module, "SessionLocal", lambda: session)
@@ -1089,7 +1087,7 @@ def test_run_weekly_writes_discovery_rca_batch_plan_artifact(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Weekly discovery should leave a ready Codex RCA queue next to the
-    evidence log, so a disconnected Windows session can be continued from
+    evidence log, so a disconnected browser session can be continued from
     artifacts alone."""
     session = _session()
     monkeypatch.setattr(module, "SessionLocal", lambda: session)
@@ -1243,7 +1241,7 @@ def test_weekly_alias_proposals_do_not_depend_on_script_module_name(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Windows ZIP execution must not depend on importing a sibling script by module name."""
+    """Installed execution must not depend on importing a sibling script by module name."""
 
     session = _session()
     try:

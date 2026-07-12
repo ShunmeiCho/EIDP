@@ -1,7 +1,8 @@
-"""Shared ship-gate field contract for Windows bootstrap and weekly runs.
+"""Shared acquisition-health field contract.
 
-Keep this module stdlib-only: ``scripts/validate_install.bat`` may run the
-validator before the project wheel is installed.
+The Linux/Web release gate is served-app based. These thresholds remain as
+support-only discovery and workload indicators, so existing metrics and
+historical evidence remain comparable.
 """
 
 from __future__ import annotations

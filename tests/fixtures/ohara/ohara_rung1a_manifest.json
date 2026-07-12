@@ -1,0 +1,60 @@
+{
+  "manifest_version": 1,
+  "corporation_name": "大原学園",
+  "fiscal_year": 2025,
+  "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+  "notes": "Rung 1a pin. URL is authoritative for year + file selection. PDF body corroborates identity only. master.xlsx is EXPECTED-OUTPUT authority, never a source of PDF identity.",
+  "schools": [
+    {
+      "school_key": "大原学園",
+      "campus_key": "大原簿記情報専門学校札幌校",
+      "school_name": "大原簿記情報専門学校札幌校",
+      "prefecture": "北海道",
+      "fiscal_year": 2025,
+      "pdf_paths": [
+        "pdf/2025-1-01-01-5.pdf"
+      ],
+      "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf",
+      "source_page_url": "https://www.o-hara.ac.jp/about/joho/",
+      "authority_basis": {
+        "source_type": "human_confirmed_official_pdf",
+        "confirmed_by": "operator",
+        "confirmed_at": "2026-07-05",
+        "evidence": [
+          {
+            "kind": "source_page",
+            "value": "https://www.o-hara.ac.jp/about/joho/",
+            "note": "大原 disclosure index page listing the 確認申請書 PDFs"
+          },
+          {
+            "kind": "pdf_url",
+            "value": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf",
+            "note": "resolved absolute URL; URL selects the file"
+          },
+          {
+            "kind": "url_year_hint",
+            "value": "2025",
+            "note": "fiscal year encoded in the URL/path is authoritative"
+          },
+          {
+            "kind": "filename_hint",
+            "value": "2025-1-01-01-5.pdf",
+            "note": "part -5 = 確認申請書 (財務・経営情報 様式第2号の4-2), carries 学生総定員数/学生実員 per 学科"
+          },
+          {
+            "kind": "pdf_text_school_hint",
+            "value": "大原簿記情報専門学校札幌校",
+            "note": "read from the 確認申請書 PDF 学校名 header; identity corroboration only"
+          },
+          {
+            "kind": "master_school_name",
+            "value": "大原簿記情報専門学校札幌校",
+            "note": "matches a master 大原学園 campus; EXPECTED-OUTPUT authority, never reverse-inferred as PDF identity"
+          }
+        ]
+      },
+      "status": "pinned",
+      "notes": "Rung 1a target: school code 01. 6 table-grid records from the single part-5 file cover full 学科 set."
+    }
+  ]
+}

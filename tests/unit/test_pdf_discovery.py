@@ -1044,7 +1044,7 @@ def test_run_pdf_discovery_continues_after_downloaded_pdf_names_sibling_school(
 
 # ---------------------------------------------------------------------------
 # B1 bounded pre-rank body-classification pass
-# (docs/plans/2026-05-31-b1-prerank-classification.md §5 test matrix).
+# (the bounded pre-rank regression matrix retained in this test module).
 #
 # Regression coverage for the pre-rank pass and its public surface:
 #   - eidp.scraper.pdf_discovery.MAX_PRERANK_CLASSIFY (constant)

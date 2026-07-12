@@ -1,0 +1,185 @@
+"""Rung 1c acceptance (env-gated): 11 risk-typed 大原 candidates + the 06 finding ->
+table extraction -> pinned-identity actual rows -> 学科 alignment -> master diff.
+
+Honest Rung 1c outcome (empirical dry-run over all 11 candidates):
+  * 7 schools clear the enrollment+intl HARD gate (diff=0, no ambiguity, no
+    missing/unexpected, no loose-key collision) and form the clean gated set.
+  * 06 (盛岡校) is a documented master_expected_error (在籍 master=91 vs official
+    PDF 92); kept OUT of the clean gate.
+  * 09/10/12/13 are department_key_error: master short-form 学科 keys vs PDF
+    verbose 学科+コース keys diverge in granularity. For 12/13 the hard-gate VALUES
+    match pairwise (pure key divergence), for 10 the loose key OVER-collapses
+    (ambiguous_key), for 09 there is an extra intl field/extractor gap. None are
+    fixable by loosening the loose key (that would over-merge) -- they need an
+    alignment fold or an owner mapping, so they are carried as non-gate items.
+
+The 10-school target is therefore NOT met by clean gate; this is reported
+honestly (RUNG_1C_PASS_WITH_MASTER_AUDIT_REQUIRED for the 7 + audits, the count
+short of 10) rather than forced. The manifest-structure test runs unconditionally.
+
+Skipped unless EIDP_OHARA_SAMPLE_DIR is set and data/master.xlsx (red-line) is present.
+"""
+
+import json
+import os
+from pathlib import Path
+
+import pytest
+
+from eidp.excel.actual_row_converter import convert_to_master_metric_rows
+from eidp.excel.master_diff import (
+    HARD_GATE_METRICS,
+    align_department_fields,
+    detect_department_key_collisions,
+    diff_metric_rows,
+    rung_gate,
+)
+from eidp.excel.master_loader import SkippedDepartmentRow, load_master_metric_rows
+from eidp.pdf.master_ground_truth import normalize_text
+from eidp.pdf.pinned_manifest import PinnedManifestRow, load_pinned_manifest
+from eidp.pdf.table_grid_extractor import extract_table_grid_records
+
+_SAMPLE = os.environ.get("EIDP_OHARA_SAMPLE_DIR")
+_MASTER = Path("data/master.xlsx")
+_MANIFEST = Path("tests/fixtures/ohara/rung1c_manifest.json")
+_ALLOWED_RISK_FLAGS = {
+    "obvious_match",
+    "sibling_school_risk",
+    "field_label_variation",
+    "taxonomy_cross_source",
+    "legacy_blank_rows",
+    "department_key_granularity",
+}
+_HARD_GATE = ("enrollment", "intl_students")
+
+_needs_data = pytest.mark.skipif(
+    not _SAMPLE or not _MASTER.exists() or not _MANIFEST.exists(),
+    reason="needs EIDP_OHARA_SAMPLE_DIR + data/master.xlsx + the Rung-1c manifest fixture",
+)
+
+
+def _run(row: PinnedManifestRow):
+    pdf = Path(_SAMPLE or ".") / Path(row.pdf_paths[0]).name
+    records = extract_table_grid_records(pdf)
+    actual = convert_to_master_metric_rows(
+        records,
+        school_key=normalize_text(row.school_key),
+        campus_key=normalize_text(row.campus_key),
+        fiscal_year=row.fiscal_year,
+    )
+    skipped: list[SkippedDepartmentRow] = []
+    expected = load_master_metric_rows(
+        _MASTER, corporation_name=row.school_key, school_name=row.campus_key,
+        fiscal_year=row.fiscal_year, prefecture=row.prefecture, skipped=skipped,
+    )
+    collisions = detect_department_key_collisions(expected, actual)
+    exp2, act2, taxonomy = align_department_fields(expected, actual)
+    result = diff_metric_rows(exp2, act2)
+    return result, rung_gate(result), taxonomy, collisions, actual, skipped
+
+
+def _row(campus_key: str) -> PinnedManifestRow:
+    return next(r for r in load_pinned_manifest(_MANIFEST) if r.campus_key == campus_key)
+
+
+def _skip_if_missing(row: PinnedManifestRow) -> None:
+    if not (Path(_SAMPLE or ".") / Path(row.pdf_paths[0]).name).exists():
+        pytest.skip(f"sample not found for {row.campus_key}")
+
+
+def test_rung1c_manifest_declares_11_candidates_with_prefecture_and_authority() -> None:
+    """Fixture contract (no data): 7 pinned + 1 master finding + 4 department_key_error,
+    every pin carries prefecture, a valid risk_flag set, human-confirmed official-PDF
+    authority, and an expected_master_filter."""
+    raw = json.loads(_MANIFEST.read_text(encoding="utf-8"))
+    schools = raw["schools"]
+    assert len(schools) == 12  # 7 gated + 06 finding + 4 department_key_error
+    for school in schools:
+        assert school["prefecture"].strip(), school["campus_key"]  # G5
+        assert school["risk_flags"], school["campus_key"]
+        assert set(school["risk_flags"]) <= _ALLOWED_RISK_FLAGS, school["campus_key"]
+        assert school["authority_basis"]["source_type"] == "human_confirmed_official_pdf"
+        assert "expected_master_filter" in school
+    by_status: dict[str, int] = {}
+    for school in schools:
+        by_status[school["status"]] = by_status.get(school["status"], 0) + 1
+    assert by_status["pinned"] == 7
+    assert by_status["pinned_master_finding"] == 1
+    assert by_status["department_key_error"] == 4
+
+
+@_needs_data
+def test_rung1c_seven_gated_schools_pass_hard_gate_with_evidence() -> None:
+    """The 7 clean-gate schools: enrollment+intl diff=0, no ambiguity, no
+    missing/unexpected, no loose-key collision, and every present hard-gate actual
+    value carries page/table/row/col evidence in source_cell."""
+    gated = [r for r in load_pinned_manifest(_MANIFEST) if r.status == "pinned"]
+    assert len(gated) == 7
+    for row in gated:
+        _skip_if_missing(row)
+        result, gate, _taxonomy, collisions, actual, skipped = _run(row)
+        assert collisions == [], (row.campus_key, collisions)  # G2
+        # G1: any legacy blank-enrollment master row must be RECORDED, never silently
+        # dropped -- even inside the clean-gate acceptance path.
+        for s in skipped:
+            assert s.skip_reason, (row.campus_key, s.department_key)
+        assert gate.passed, (row.campus_key, [(e.key, e.category) for e in gate.gate_failures])
+        assert result.counts["ambiguous_key"] == 0, row.campus_key
+        assert result.counts["missing_actual"] == 0, row.campus_key
+        assert result.counts["unexpected_actual"] == 0, row.campus_key
+        hard = [e for e in result.entries if e.metric in _HARD_GATE]
+        assert hard, row.campus_key
+        assert all(e.category == "exact_match" for e in hard), (
+            row.campus_key, [(e.key, e.category) for e in hard if e.category != "exact_match"]
+        )
+        # every present hard-gate actual value must carry page/table/row/col evidence
+        present_hard = [
+            r for r in actual if r.metric in HARD_GATE_METRICS and r.value is not None
+        ]
+        assert present_hard, row.campus_key
+        for r in present_hard:
+            assert r.source_cell and "page=" in r.source_cell, (row.campus_key, r.department_key)
+
+
+@_needs_data
+def test_rung1c_morioka_is_a_documented_master_expected_error() -> None:
+    """06 pin binds 盛岡校 (all other hard-gate metrics exact); it fails ONLY on the
+    known master Δ1 (在籍 master=91 vs official PDF 92) -- master_expected_error."""
+    row = _row("大原ビジネス公務員専門学校盛岡校")
+    assert row.status == "pinned_master_finding"
+    _skip_if_missing(row)
+    result, gate, _taxonomy, _collisions, _actual, _skipped = _run(row)
+    assert not gate.passed
+    hard_fail = [e for e in gate.gate_failures if e.metric in _HARD_GATE]
+    assert len(hard_fail) == 1
+    only = hard_fail[0]
+    assert only.metric == "enrollment"
+    assert only.category == "value_mismatch"
+    assert only.expected_value == 91  # master (stale)
+    assert only.actual_value == 92  # official PDF (authoritative)
+    others = [e for e in result.entries if e.metric in _HARD_GATE and e.key != only.key]
+    assert others
+    assert all(e.category == "exact_match" for e in others)
+
+
+@_needs_data
+def test_rung1c_hosei_is_department_key_error_not_value_error() -> None:
+    """12 大原法律専門学校 is a pure department_key_error: the loose key does not join
+    (missing+unexpected>0), but there is NO paired hard-gate value_mismatch -- the
+    values agree, only the 学科 key granularity diverges. It must NOT be forced into
+    the gate by loosening the key (that would over-merge)."""
+    row = _row("大原法律専門学校")
+    assert row.status == "department_key_error"
+    _skip_if_missing(row)
+    result, gate, _taxonomy, collisions, _actual, _skipped = _run(row)
+    assert not gate.passed
+    assert result.counts["missing_actual"] > 0
+    assert result.counts["unexpected_actual"] > 0
+    # key divergence, not value divergence: no paired hard-gate value_mismatch.
+    hard_value_mismatch = [
+        e for e in result.entries
+        if e.metric in _HARD_GATE and e.category == "value_mismatch"
+    ]
+    assert hard_value_mismatch == []
+    # loose-key collision detector must NOT paper over it with a false merge.
+    assert collisions == []

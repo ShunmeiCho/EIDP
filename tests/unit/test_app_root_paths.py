@@ -1,10 +1,4 @@
-"""Sprint 8.5.a — application root resolution.
-
-The fallback chain is the difference between "works on operator PC"
-and "Streamlit launches with cwd=C:\\Windows\\System32 because Task
-Scheduler". Lock the three paths and verify the last resort never
-returns a site-packages directory.
-"""
+"""Application-root resolution for source checkouts and Linux installs."""
 
 from __future__ import annotations
 
@@ -34,9 +28,7 @@ def test_resolve_app_root_expands_user_in_env(tmp_path: Path, monkeypatch: pytes
 
 
 def test_resolve_app_root_uses_cwd_when_marker_present(tmp_path: Path):
-    """If cwd looks like an app root (data/ or .env or pyproject.toml),
-    we trust it. This is what happens when launcher.bat does
-    ``cd /d "%~dp0\\..\"`` and there's no env override."""
+    """A source checkout may use its cwd when no explicit root is set."""
     cwd = tmp_path / "EIDP"
     cwd.mkdir()
     (cwd / "data").mkdir()  # marker
@@ -80,7 +72,7 @@ def test_resolve_app_root_requires_env_when_installed_wheel_has_no_marker(tmp_pa
     """Installed wheels must fail closed instead of writing under site-packages."""
     blank = tmp_path / "blank"
     blank.mkdir()
-    module_file = tmp_path / ".venv" / "Lib" / "site-packages" / "eidp" / "config.py"
+    module_file = tmp_path / ".venv" / "lib" / "python3.12" / "site-packages" / "eidp" / "config.py"
     module_file.parent.mkdir(parents=True)
     module_file.write_text("# fake installed module\n", encoding="utf-8")
 

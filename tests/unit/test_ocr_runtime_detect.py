@@ -57,23 +57,9 @@ def test_default_free_ram_reader_prefers_psutil_probe(monkeypatch: pytest.Monkey
     import eidp.ocr.runtime_detect as runtime_detect
 
     monkeypatch.setattr(runtime_detect, "_psutil_available_memory_mb", lambda: 8 * 1024)
-    monkeypatch.setattr(runtime_detect, "_windows_available_memory_mb", lambda: None)
     monkeypatch.setattr(runtime_detect, "_posix_available_memory_mb", lambda: None)
 
     assert _default_free_ram_reader() == 8 * 1024
-
-
-def test_default_free_ram_reader_uses_windows_api_without_psutil(monkeypatch: pytest.MonkeyPatch):
-    """Windows operator ZIPs do not have to bundle psutil; stdlib memory
-    detection must still keep OCR auto-enable from failing closed on RAM."""
-    import eidp.ocr.runtime_detect as runtime_detect
-
-    monkeypatch.setattr(runtime_detect, "_psutil_available_memory_mb", lambda: None)
-    monkeypatch.setattr(runtime_detect, "_windows_available_memory_mb", lambda: 12 * 1024)
-    monkeypatch.setattr(runtime_detect, "_posix_available_memory_mb", lambda: None)
-    monkeypatch.setattr(runtime_detect.os, "name", "nt")
-
-    assert _default_free_ram_reader() == 12 * 1024
 
 
 def test_default_free_ram_reader_uses_posix_probe(monkeypatch: pytest.MonkeyPatch):
@@ -81,8 +67,6 @@ def test_default_free_ram_reader_uses_posix_probe(monkeypatch: pytest.MonkeyPatc
 
     monkeypatch.setattr(runtime_detect, "_psutil_available_memory_mb", lambda: None)
     monkeypatch.setattr(runtime_detect, "_posix_available_memory_mb", lambda: 2 * 1024)
-    monkeypatch.setattr(runtime_detect.os, "name", "posix")
-
     assert _default_free_ram_reader() == 2 * 1024
 
 

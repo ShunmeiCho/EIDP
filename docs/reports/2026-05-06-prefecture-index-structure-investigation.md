@@ -56,7 +56,7 @@ The official-prefecture path is materially better:
 ## Verified Local Parse Evidence
 
 These were downloaded only as development verification artifacts. The product
-behavior remains runtime download on the Windows operator PC.
+behavior remains runtime download by the Linux application service.
 
 | Prefecture | Artifact | Rows parsed | URLs parsed | Notes |
 | --- | --- | ---: | ---: | --- |
@@ -164,7 +164,7 @@ Needs owner/manual structure confirmation:
 
 ## Product Build Implications
 
-Windows deployment should not ship a frozen PDF corpus. It should ship:
+The Linux deployment should not keep a frozen PDF corpus. It should provide:
 
 - parser registry,
 - seed CSV of official confirmer pages/artifacts,

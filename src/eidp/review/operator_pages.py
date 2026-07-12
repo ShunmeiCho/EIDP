@@ -156,7 +156,7 @@ def sample_path(raw_path: str | Path, suffixes: tuple[str, ...], *, must_exist: 
 
 @contextmanager
 def _optional_operator_lock(lock_path: Path | None, owner: str) -> Iterator[None]:
-    """Share the Windows app lock for UI actions that mutate the database."""
+    """Share the application lock for UI actions that mutate the database."""
     if lock_path is None:
         yield
         return

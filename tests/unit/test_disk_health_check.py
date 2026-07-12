@@ -18,10 +18,10 @@ def _touch(path: Path, size: int = 1) -> None:
 
 
 def test_evaluate_target_reports_warn_and_block_thresholds(tmp_path: Path) -> None:
-    _touch(tmp_path / "dist" / "eidp-windows-v999.zip", 21)
+    _touch(tmp_path / "output" / "large-export.xlsx", 21)
     target = module.DiskTarget(
-        "dist",
-        Path("dist"),
+        "output",
+        Path("output"),
         warn_bytes=10,
         block_bytes=20,
         cleanup_hint="prune",
@@ -38,7 +38,7 @@ def test_evaluate_profile_marks_protected_data_without_deleting(tmp_path: Path) 
     _touch(tmp_path / "data" / "eidp.sqlite3", 11)
     _touch(tmp_path / "data" / "master.xlsx", 13)
 
-    summary = module.evaluate_profile(tmp_path, "mac-dev")
+    summary = module.evaluate_profile(tmp_path, "local-dev")
 
     data_entry = next(entry for entry in summary["entries"] if entry["name"] == "data")
     assert data_entry["protected"] is True
@@ -47,8 +47,8 @@ def test_evaluate_profile_marks_protected_data_without_deleting(tmp_path: Path) 
     assert (tmp_path / "data" / "master.xlsx").exists()
 
 
-def test_operator_profile_covers_pdf_output_logs_and_audit_paths(tmp_path: Path) -> None:
-    names = {entry["name"] for entry in module.evaluate_profile(tmp_path, "operator-win")["entries"]}
+def test_linux_server_profile_covers_pdf_output_logs_and_audit_paths(tmp_path: Path) -> None:
+    names = {entry["name"] for entry in module.evaluate_profile(tmp_path, "linux-server")["entries"]}
 
     assert {
         "app_root_total",
@@ -61,15 +61,15 @@ def test_operator_profile_covers_pdf_output_logs_and_audit_paths(tmp_path: Path)
 
 def test_main_can_fail_on_warn(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
     _touch(tmp_path / "logs" / "run.log", 6)
-    original_targets = module.PROFILES["mac-dev"]
+    original_targets = module.PROFILES["local-dev"]
 
     try:
-        module.PROFILES["mac-dev"] = lambda: (
+        module.PROFILES["local-dev"] = lambda: (
             module.DiskTarget("logs", Path("logs"), warn_bytes=5, block_bytes=10),
         )
-        rc = module.main(["--root", str(tmp_path), "--profile", "mac-dev", "--fail-on-warn"])
+        rc = module.main(["--root", str(tmp_path), "--profile", "local-dev", "--fail-on-warn"])
     finally:
-        module.PROFILES["mac-dev"] = original_targets
+        module.PROFILES["local-dev"] = original_targets
 
     assert rc == 1
     assert "warn=1" in capsys.readouterr().out

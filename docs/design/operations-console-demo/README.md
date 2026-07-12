@@ -21,7 +21,7 @@ Open:
 `eidp-operations-console.demo.standalone.html`
 
 This standalone file is for local preview and stakeholder demos. It should not
-be embedded into Streamlit or packaged as the Windows operator application.
+be embedded into Streamlit or served as the production application.
 
 ## Missing editable source
 

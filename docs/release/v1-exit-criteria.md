@@ -1,56 +1,21 @@
-# v1 Exit Criteria
+# EIDP v1 Exit Criteria
 
-Updated: 2026-06-20
+EIDP v1 is a Linux-hosted internal Web workflow for vocational-school data.
 
-This file defines what "v1 complete" means for EIDP. It is a release decision
-anchor, not a backlog. Detailed operational gates remain in
-`docs/governance/release-gates.md`,
-`docs/runbooks/eidp-v1-release-admin-checklist.md`, and
-`docs/reports/current-release-status.md`.
+Mandatory exit criteria:
 
-## v1 Scope
+- full Ruff, high-severity Bandit, mypy, and pytest are green;
+- confirmed-PDF intake through double-check passes exact E2E assertions;
+- Web writes share the SQLite application lock and contention never writes;
+- append-only revision, audit/outbox, master.xlsx read-only, and Excel-output
+  contracts pass;
+- a frozen dependency install, start, stop, and restart succeed under
+  `/home/junming/EIDP/.venv`;
+- Streamlit remains loopback-bound and a real authorized business PC completes
+  upload, review, and download through the internal endpoint;
+- image/OCR exceptions have an accepted policy and visible manual path;
+- authentication/allowlist, retention, and backup/restore evidence are recorded;
+- operator acceptance is recorded without unresolved high-risk mismatches.
 
-v1 is complete only for the vocational-school-first, one-operator Windows
-rolling fiscal-year workflow. It is not complete merely because one fiscal
-year's PDFs were scraped once:
-
-- official index and official disclosure entry based PDF discovery;
-- target-year judgment for the configured fiscal year;
-- deterministic PDF extraction, OCR fallback when in scope, and manual review;
-- program/metrics review sufficient for workbook output;
-- audit trail for manual business decisions;
-- Excel-ready gate and workbook export;
-- Windows ZIP installation and operation.
-
-v1 completion does not mean university production support, multi-operator
-operation, PostgreSQL, cloud deployment, or a React production frontend.
-
-## Exit Criteria
-
-All criteria below must be true before v1 can be called complete:
-
-| Gate | Required result |
-| --- | --- |
-| Source scope | v1 remains scoped to `専門学校` unless an owner-approved scope change exists |
-| Rolling operation | official disclosure entries and institution/program evidence are reusable across future fiscal years; documents, metrics, tasks, exports, and gate evidence stay `fiscal_year`-scoped |
-| Official evidence | PDF discovery starts from MEXT/prefecture/authority indexes and official disclosure entries |
-| Target year | current target-year evidence is explicit, or a formal `publication_lag` exception is approved |
-| PDF identity | target-document kind and institution identity are confirmed before business ingestion |
-| Extraction | parsed/OCR/manual values are accepted through confidence or operator review gates |
-| Program changes | new, discontinued, renamed, merged, or split programs are reviewed before export |
-| Excel-ready | unconfirmed, low-confidence, mismatched, non-target, and old-year rows cannot silently enter Excel |
-| Audit | manual URL, PDF, fiscal-year, metrics, program-change, and export decisions are logged |
-| Windows evidence | setup, start, weekly run, diagnose, SQLite lock behavior, and Excel output are validated on Windows |
-| Owner return | owner/operator E2E template, KPI rows, sign-off, and evidence verification pass |
-| Release conclusion | the only acceptable GA conclusion is `READY`; `RC_ONLY` and `NOT_READY` do not complete v1 |
-
-## Current Decision
-
-As of 2026-06-20, v1 is not complete. The current release status remains
-`NOT_READY` until the release gates above have real evidence and the owner
-decisions are returned.
-
-Current blocking areas are tracked in `docs/reports/current-release-status.md`
-and include FY2026/R8 as the current rolling fiscal-year strict-yield gate,
-owner/operator real-cycle sign-off, the unapproved `publication_lag` path, and
-the selected OCR release scope.
+Automatic target-year discovery yield is monitored but is not an exit gate.
+University production support remains out of v1 scope.

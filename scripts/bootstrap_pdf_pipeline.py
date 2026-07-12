@@ -1,8 +1,8 @@
-"""Sprint 8.7.e — end-to-end PDF discovery bootstrap on the operator PC.
+"""End-to-end PDF discovery bootstrap for the Linux/Web service.
 
 This script runs the four-step PDF acquisition pipeline against the
-local SQLite database. It is the production entrypoint behind
-``bootstrap_pdfs.bat`` and also reusable as a manual recovery path:
+local SQLite database. It is reusable as a controlled bootstrap or manual
+recovery path:
 
     Step 1  download prefecture artifact PDFs / XLSX from URLs in
             data/prefecture-aggregators/seed.csv
@@ -24,11 +24,10 @@ Scope note:
     still depends on which prefectures have a supported parser and a current
     artifact URL in ``data/prefecture-aggregators/seed.csv``.
 
-Why not bake artifacts into the ZIP at build time?
+Why not keep a frozen artifact corpus in the deployment?
     Prefectures publish new disclosures every fiscal year.
-    A ZIP that ships pre-downloaded artifacts is frozen against the
-    build date. Running the pipeline on the operator PC keeps the data
-    fresh.
+    Pre-downloaded artifacts become stale against the deployment date.
+    Running the pipeline on the server keeps the data fresh.
 """
 
 from __future__ import annotations
@@ -43,7 +42,7 @@ from typing import Any, cast
 
 
 def _configure_utf8_stdio(stdout: Any = sys.stdout, stderr: Any = sys.stderr) -> None:
-    """Keep Windows manual runs from crashing on Japanese log text."""
+    """Keep redirected CLI logs consistently encoded as UTF-8."""
 
     for stream in (stdout, stderr):
         reconfigure = getattr(stream, "reconfigure", None)

@@ -1,147 +1,57 @@
-# Release Gates
+# Linux/Web Release Gates
 
-These gates define what can be called a v1 Windows operator release. They do
-not prevent RC, demo, or internal checkpoint builds, but they do prevent GA
-claims.
+EIDP is releasable only when all mandatory gates below have fresh evidence.
+Green unit tests alone are insufficient.
 
-## v1 Release Scope
+## G0 — source and quality
 
-v1 release validation is scoped to:
+- `main` is the only development line.
+- `uv.lock` is current and dependency installation succeeds with `--frozen`.
+- Ruff, high-severity Bandit, mypy, and full pytest pass.
+- CI keeps the required check names `Python quality gates` and
+  `Ship gate contract`; the latter now enforces the Linux/Web served-app
+  contract.
 
-- vocational schools (`専門学校`)
-- one Windows operator
-- local SQLite
-- Streamlit UI
-- rolling fiscal-year operation, not a one-year scraping run
-- official index and official disclosure entry discovery
-- target application PDF verification
-- deterministic extraction, OCR fallback, and manual review
-- Excel-ready gating and workbook export
-- audit trail for manual decisions
+## G1 — served application
 
-University production support is v2+ unless a separate university gold set,
-parser workflow, and operator validation gate are added.
+- `deploy/linux/run_web.sh` sets `EIDP_APP_ROOT`, uses the project `.venv`, and
+  binds Streamlit to `127.0.0.1`.
+- The Web entry point imports and starts on Venus from
+  `/home/junming/EIDP` without writing outside that directory.
+- Intake -> queue -> review -> master diff -> double-check E2E passes with exact
+  expected record counts and `excel_ready` invariants.
+- Every Web mutation participates in the shared `data/.lock` contract.
 
-## Required Evidence
+## G2 — data integrity
 
-A v1 release candidate must include evidence for:
+- Four-table append-only fiscal-year revision tests pass.
+- Audit DB/outbox dedup and master.xlsx read-only tests pass.
+- Duplicate PDFs are detected through hashes/keys.
+- Image/OCR exceptions and reconciliation mismatches remain visible and cannot
+  enter final output silently.
 
-- Mac/Linux unit and quality gates
-- Windows ZIP build and distribution verification
-- Windows VM offline validation
-- real-PC operator validation when required by the runbook
-- OCR add-on validation if OCR support is advertised
-- SQLite file locking behavior
-- Excel output and file-lock handling
-- diagnostics bundle generation
-- target-year discovery yield
-- publication-lag decision
-- owner/operator sign-off
+## G3 — deployment and network
 
-Mac-side tests prove business logic and package shape only. They do not prove
-Windows deployability.
+- Venus resources, Python 3.12/uv, storage permissions, and restart mechanism
+  are verified.
+- The service and all runtime artifacts stay under `/home/junming/EIDP`.
+- Streamlit is loopback-only; the approved internal endpoint is reachable from
+  an authorized business PC and is not publicly exposed.
+- Upload, review, and download are tested from the real business network.
 
-Owner sign-off may be a short form, but the sign-off basis must be complete:
-release summary, evidence bundle, known limitations, current blockers, package
-SHA256, source commit, packaged commit, latest CI, and Windows evidence. Owner
-sign-off is a release-risk decision, not a manual re-run of the technical
-checklist. See `docs/governance/owner-release-signoff.md`.
+## G4 — security and operations
 
-## Rolling Target-Year Yield
+- No secrets are committed or logged.
+- Authentication/allowlist policy matches the approved LAN risk decision.
+- Backup and restore of SQLite, audit data, uploads, and exports are proven.
+- Operator identity and review actions are auditable.
 
-Release status must distinguish:
+## support-only metrics
 
-- strict target-year Excel-ready count for the evaluated fiscal year
-- operator-reviewable count
-- publication-lag cases
-- OCR/manual-entry cases
-- non-target and old-year exclusions
+Automatic target-year discovery yield and the historical 60%/30% thresholds
+remain health/workload indicators in `scripts/ship_gate_contract.py`. They do not determine Linux/Web v1 release readiness.
 
-The `60%` v1 minimum is strict. It means target application PDF identity,
-institution identity, target fiscal-year evidence, extraction, and Excel-ready
-gating all passed for the evaluated fiscal year. It is not a broad PDF discovery
-rate, not a "PDF contains the year string" rate, and not an old-year or
-sibling-school fallback rate.
+## Current conclusion
 
-Every yield percentage must state its denominator and interpretation. For
-example, `12/50 = 24.0%` in the v548 bounded Windows canary is the strict
-target PDF plus Excel-ready rate for a selected target-missing cohort. It is
-not whole-database readiness, not PDF acquisition rate, and not project
-completion rate. Do not use an unstated-denominator percentage for release
-decisions.
-
-Do not claim GA if the evaluated fiscal year's strict yield is below the active
-release gate or if publication-lag exceptions are unresolved.
-
-Acceptable labels while gates are open:
-
-- release candidate
-- demo
-- publication-lag-aware operator tool
-- v1-scoped vocational-school release candidate
-
-Forbidden labels while gates are open:
-
-- GA
-- 2400-school full coverage
-- FY2026/R8 automatic collection stable
-- university production ready
-
-## Excel Export Gate
-
-Workbook export must be blocked or visibly downgraded when:
-
-- target fiscal year is unconfirmed
-- PDF identity is mismatched
-- document kind is not target application form
-- extraction confidence is below the auto-accept threshold
-- OCR output lacks review where review is required
-- program reconciliation is unresolved
-- manual audit evidence is missing
-- workbook template is missing
-- output path is not writable
-- an Excel file lock prevents safe output
-
-Partial export behavior must show which institutions were excluded and why.
-
-## Parser And Discovery Changes
-
-Parser or discovery changes that affect business acceptance require:
-
-- regression tests for the new acceptance or rejection behavior
-- negative tests for near-miss PDFs or URLs
-- evidence that non-target and old-year documents remain excluded
-- school-identity mismatch coverage when relevant
-- no bypass of URL safety or crawl throttling
-
-PDF parser main logic should not change without fixtures or gold samples that
-cover target PDFs, prior-year PDFs, non-target PDFs, image PDFs, school mismatch,
-year-unknown cases, and program-change cases when applicable.
-
-## PR Checklist
-
-Use this checklist for non-trivial PRs:
-
-- [ ] Does this affect official index ingestion or PDF discovery?
-- [ ] Does this affect fiscal-year judgment?
-- [ ] Does this affect document-kind classification?
-- [ ] Does this affect school identity matching?
-- [ ] Does this affect extraction confidence or OCR behavior?
-- [ ] Does this affect program reconciliation?
-- [ ] Does this affect Excel-ready status or workbook export?
-- [ ] Does this add or change workflow status names?
-- [ ] Does this record audit events for manual business decisions?
-- [ ] Does this preserve append-only revision contracts?
-- [ ] Does this include regression tests or gold samples where required?
-- [ ] Does this need Windows VM or real-PC validation?
-- [ ] Does this keep v1 scoped to vocational schools?
-- [ ] Does this keep demo UI separate from production UI?
-
-## Documentation Consistency
-
-README, architecture docs, UI prototype docs, release reports, and stakeholder
-materials must use the same scope and release language.
-
-Do not let one document claim v1 supports universities or GA while another
-states the release is still gated on vocational-school target-year yield,
-publication lag, Windows validation, or owner sign-off.
+Until the Venus served-app, LAN browser, and backup/restore evidence exists,
+the release forecast is `NOT_READY`.

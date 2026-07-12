@@ -1,6 +1,6 @@
-"""Sprint 8.6.c — OCR add-on package.
+"""OCR support for the image-PDF rescue path.
 
-Image-PDF rescue path. Add-on ZIP carries the Tesseract binary and
+The Linux runtime may provide the Tesseract binary and
 ``jpn.traineddata``; this package wraps both behind a small functional
 surface that ``ingest.py`` (Sprint 8.6.d) can call without learning
 about subprocesses or hardware-detection logic.
