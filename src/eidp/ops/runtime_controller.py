@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import secrets
 import stat
@@ -10,9 +11,15 @@ import subprocess
 import sys
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from dataclasses import asdict
 from pathlib import Path
 from typing import NoReturn
 
+from eidp.ops.deployment_manifest import (
+    DeploymentManifestError,
+    collect_deployment_manifest,
+    write_deployment_manifest_atomic,
+)
 from eidp.ops.runtime_config import load_runtime_config
 from eidp.ops.runtime_process import (
     ControllerError,
@@ -136,6 +143,11 @@ def _parser() -> argparse.ArgumentParser:
     restart.add_argument("--health-timeout", type=float, default=30.0)
     restart.add_argument("--timeout", type=float, default=10.0)
     commands.add_parser("health").add_argument("--timeout", type=float, default=2.0)
+    manifest = commands.add_parser("manifest")
+    manifest.add_argument("--actor", required=True)
+    manifest.add_argument("--expected-deployment-commit")
+    manifest.add_argument("--pre-upgrade-backup-id")
+    manifest.add_argument("--off-host-receipt-id")
     return parser
 
 
@@ -183,8 +195,28 @@ def main(arguments: Sequence[str] | None = None) -> int:
             if parsed.command == "health":
                 _health(app_root, timeout=parsed.timeout)
                 return 0
+            if parsed.command == "manifest":
+                runtime = load_runtime_config(app_root / ".env")
+                deployment = collect_deployment_manifest(
+                    app_root=app_root,
+                    runtime=runtime,
+                    actor=parsed.actor,
+                    expected_deployment_commit=parsed.expected_deployment_commit,
+                    pre_upgrade_backup_id=parsed.pre_upgrade_backup_id,
+                    off_host_receipt_id=parsed.off_host_receipt_id,
+                )
+                write_deployment_manifest_atomic(app_root / "run" / "deployment-manifest.json", deployment)
+                print(json.dumps(asdict(deployment), ensure_ascii=False, sort_keys=True))
+                return 0
             raise ControllerError(f"unsupported command: {parsed.command}")
-    except (ControllerError, ProcessIdentityError, ValueError, OSError, subprocess.SubprocessError) as exc:
+    except (
+        ControllerError,
+        DeploymentManifestError,
+        ProcessIdentityError,
+        ValueError,
+        OSError,
+        subprocess.SubprocessError,
+    ) as exc:
         _fail(str(exc))
 
 
