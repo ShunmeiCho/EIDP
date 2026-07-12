@@ -414,12 +414,30 @@ git commit -m "feat: build finalized recovery packages" -m "Goals: G2, G9, G10, 
 **Files:**
 - Create: `src/eidp/ops/restore_drill.py`
 - Create: `src/eidp/ops/receipt_id.py`
+- Modify: `src/eidp/ops/deployment_manifest.py`
+- Modify: `src/eidp/ops/runtime_controller.py`
 - Modify: `src/eidp/cli.py`
 - Create: `tests/unit/test_restore_drill.py`
+- Create: `tests/unit/test_receipt_id.py`
+- Modify: `tests/unit/test_backup_package.py`
+- Modify: `tests/unit/test_deployment_manifest.py`
+- Modify: `tests/unit/test_linux_runtime_controller.py`
+- Modify: `tests/unit/test_cli_write_lock_contract.py`
 
 **Interfaces:**
 - Consumes: a verified finalized backup package and matching protected checkout
 - Produces: an isolated restored tree plus secret-free `restore-report.v1.json`; live data is untouched
+
+**Descriptor-safe verifier resolution (2026-07-13):** Task 5 must not call the
+Task 4 path-based verifier after opening its source or staged directory. A
+component-check-to-open race can otherwise redirect read-only verification
+outside the project root. The restore drill therefore uses a descriptor-bound
+package authority while retaining the same package schema and acceptance
+semantics. A static mutation parity contract must prove that the Task 4 public
+verifier and the Task 5 descriptor verifier agree on valid packages and on
+artifact, marker, manifest-field, optional-root, and schema corruption. This is
+an explicit security exception to path-level verifier reuse; it does not
+authorize a second package format.
 
 - [ ] **Step 1: Write failing traversal, isolation and smoke tests**
 
@@ -480,13 +498,19 @@ def run_restore_drill(
 
 The smoke process receives restored `EIDP_DATA_DIR`/database URL, fixed `127.0.0.1`, a non-production port, and no proxy secret. It must be terminated in `finally`. `receipt_id.py` defines the shared allowlist validator `^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,127}$`. Expose the command through `eidpctl.sh restore-drill` with `--expected-manifest-sha`, `--off-host-receipt-id`, and optional `--acceptance-expectations`. When a validated receipt is supplied the expected digest is mandatory; the report persists both and the verified evidence results, never credentials. It does not update the live deployment manifest.
 
+The restored `data/master.xlsx` remains owner-read-only (`0400`); arbitrary
+source mode bits are not copied. Audit JSONL acceptance is descriptor-relative
+and bounded line-by-line, so retained archives are not loaded wholly into
+memory. Existing restore reports require a strictly parsed UTC verification
+timestamp before idempotent return.
+
 - [ ] **Step 4: Add CLI, run tests and commit**
 
 ```bash
-uv run pytest tests/unit/test_restore_drill.py tests/unit/test_backup_package.py -v
-uv run ruff check src/eidp/ops/restore_drill.py src/eidp/ops/receipt_id.py src/eidp/cli.py tests/unit/test_restore_drill.py
-uv run mypy src/eidp/ops/restore_drill.py src/eidp/ops/receipt_id.py src/eidp/cli.py
-git add src/eidp/ops/restore_drill.py src/eidp/ops/receipt_id.py src/eidp/cli.py tests/unit/test_restore_drill.py
+uv run pytest tests/unit/test_restore_drill.py tests/unit/test_receipt_id.py tests/unit/test_backup_package.py tests/unit/test_deployment_manifest.py tests/unit/test_linux_runtime_controller.py tests/unit/test_cli_write_lock_contract.py -v
+uv run ruff check src/eidp/ops/restore_drill.py src/eidp/ops/receipt_id.py src/eidp/ops/deployment_manifest.py src/eidp/ops/runtime_controller.py src/eidp/cli.py tests/unit/test_restore_drill.py tests/unit/test_receipt_id.py tests/unit/test_backup_package.py tests/unit/test_deployment_manifest.py tests/unit/test_linux_runtime_controller.py tests/unit/test_cli_write_lock_contract.py
+uv run mypy src/eidp/ops/restore_drill.py src/eidp/ops/receipt_id.py src/eidp/ops/deployment_manifest.py src/eidp/ops/runtime_controller.py src/eidp/cli.py
+git add docs/superpowers/plans/2026-07-12-linux-web-v1-phase-1-runtime-recovery.md src/eidp/ops/restore_drill.py src/eidp/ops/receipt_id.py src/eidp/ops/deployment_manifest.py src/eidp/ops/runtime_controller.py src/eidp/cli.py tests/unit/test_restore_drill.py tests/unit/test_receipt_id.py tests/unit/test_backup_package.py tests/unit/test_deployment_manifest.py tests/unit/test_linux_runtime_controller.py tests/unit/test_cli_write_lock_contract.py
 git commit -m "feat: verify isolated backup restoration" -m "Goals: G3, G9, G13, G14"
 ```
 

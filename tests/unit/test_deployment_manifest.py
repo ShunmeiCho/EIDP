@@ -736,3 +736,63 @@ def test_controller_manifest_requires_actor_and_valid_runtime_config(
         runtime_controller.main(("manifest", "--actor", "operator"))
     assert invalid_runtime.value.code == 2
     assert not (repo.path / "run" / "deployment-manifest.json").exists()
+
+
+def test_checkout_verifier_public_signature_and_matching_ancestry(repo: RepoFixture) -> None:
+    import inspect
+
+    from eidp.ops.deployment_manifest import verify_checkout_matches_deployment
+
+    parameters = inspect.signature(verify_checkout_matches_deployment).parameters
+    assert list(parameters) == ["app_root", "deployed_commit", "uv_lock_sha256"]
+    assert all(parameter.kind is inspect.Parameter.KEYWORD_ONLY for parameter in parameters.values())
+
+    deployed = repo.head
+    later = repo.commit_tree(parent=deployed)
+    repo.set_origin_main(later)
+
+    assert (
+        verify_checkout_matches_deployment(
+            app_root=repo.path,
+            deployed_commit=deployed,
+            uv_lock_sha256=hashlib.sha256((repo.path / "uv.lock").read_bytes()).hexdigest(),
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    "mismatch",
+    ("deployed_commit", "dirty", "hidden_index", "uv_lock_sha256", "missing_origin", "unrelated_origin"),
+)
+def test_checkout_verifier_rejects_mismatched_or_unprotected_checkout(
+    repo: RepoFixture,
+    mismatch: str,
+) -> None:
+    from eidp.ops.deployment_manifest import verify_checkout_matches_deployment
+
+    deployed_commit = repo.head
+    uv_lock_sha256 = hashlib.sha256((repo.path / "uv.lock").read_bytes()).hexdigest()
+    if mismatch == "deployed_commit":
+        deployed_commit = "f" * 40
+    elif mismatch == "dirty":
+        (repo.path / "tracked.txt").write_text("dirty\n", encoding="utf-8")
+    elif mismatch == "hidden_index":
+        repo.git("update-index", "--assume-unchanged", "tracked.txt")
+        (repo.path / "tracked.txt").write_text("hidden dirty\n", encoding="utf-8")
+    elif mismatch == "uv_lock_sha256":
+        uv_lock_sha256 = "0" * 64
+    elif mismatch == "missing_origin":
+        repo.git("update-ref", "-d", "refs/remotes/origin/main")
+    else:
+        repo.set_origin_main(repo.commit_tree(parent=None))
+
+    with pytest.raises(
+        DeploymentManifestError,
+        match="commit|clean checkout|index|uv.lock|origin/main|ancestor",
+    ):
+        verify_checkout_matches_deployment(
+            app_root=repo.path,
+            deployed_commit=deployed_commit,
+            uv_lock_sha256=uv_lock_sha256,
+        )

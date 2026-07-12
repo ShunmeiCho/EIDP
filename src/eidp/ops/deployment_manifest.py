@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import configparser
 import hashlib
+import hmac
 import json
 import os
 import re
@@ -338,6 +339,30 @@ def collect_deployment_manifest(
         pre_upgrade_backup_id=backup_id,
         off_host_receipt_id=receipt_id,
     )
+
+
+def verify_checkout_matches_deployment(
+    *,
+    app_root: Path,
+    deployed_commit: str,
+    uv_lock_sha256: str,
+) -> None:
+    """Require the protected local checkout to match packaged deployment evidence."""
+
+    if _COMMIT_PATTERN.fullmatch(deployed_commit) is None:
+        raise DeploymentManifestError("deployment commit evidence is invalid")
+    if re.fullmatch(r"[0-9a-f]{64}", uv_lock_sha256) is None:
+        raise DeploymentManifestError("deployment uv.lock SHA-256 evidence is invalid")
+
+    root = _canonical_project_root(app_root)
+    source_before = _source_commits(root, deployed_commit)
+    lock_before = _uv_lock_sha256(root)
+    source_after = _source_commits(root, deployed_commit)
+    lock_after = _uv_lock_sha256(root)
+    if source_after != source_before or lock_after != lock_before:
+        raise DeploymentManifestError("deployment checkout changed during verification")
+    if not hmac.compare_digest(lock_before, uv_lock_sha256):
+        raise DeploymentManifestError("deployment uv.lock SHA-256 does not match the checkout")
 
 
 def deployment_manifest_payload(manifest: DeploymentManifest) -> dict[str, str | int | None]:

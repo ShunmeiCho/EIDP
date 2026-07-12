@@ -800,3 +800,177 @@ def test_shutdown_wait_requires_loopback_port_release() -> None:
         assert module._wait_for_port_release("127.0.0.1", port, timeout=0.05) is False
 
     assert module._wait_for_port_release("127.0.0.1", port, timeout=0.2) is True
+
+
+@pytest.mark.parametrize("source_root", ("backups", "restore-drills/incoming"))
+def test_restore_drill_delegates_exact_distinct_operator_arguments(
+    controller_env: ControllerEnv,
+    source_root: str,
+) -> None:
+    backup_id = "backup-20260712"
+    package = controller_env.app_root / source_root / backup_id
+    target = controller_env.app_root / "restore-drills/verified" / backup_id
+    expectation = (
+        controller_env.app_root
+        / "evidence/runtime/exports/123e4567-e89b-42d3-a456-426614174000.json"
+    )
+    package.mkdir(parents=True)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    expectation.parent.mkdir(parents=True)
+    expectation.write_text("{}\n", encoding="utf-8")
+
+    result = controller_env.run(
+        "restore-drill",
+        str(package),
+        "--target",
+        str(target),
+        "--smoke-port",
+        "18502",
+        "--expected-manifest-sha",
+        "a" * 64,
+        "--off-host-receipt-id",
+        "receipt:@ICT+20260712",
+        "--acceptance-expectations",
+        str(expectation),
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(controller_env.uv_args_file.read_text(encoding="utf-8")) == [
+        "run",
+        "--frozen",
+        "--no-sync",
+        "eidp",
+        "restore-drill",
+        str(package),
+        "--target",
+        str(target),
+        "--smoke-port",
+        "18502",
+        "--expected-manifest-sha",
+        "a" * 64,
+        "--off-host-receipt-id",
+        "receipt:@ICT+20260712",
+        "--acceptance-expectations",
+        str(expectation),
+    ]
+
+
+def test_restore_drill_rejects_pre_upgrade_package_before_uv_delegation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    module = _controller_module()
+    app_root = tmp_path / "app"
+    package = app_root / "backups/pre-upgrade"
+    target = app_root / "restore-drills/verified/pre-upgrade"
+    package.mkdir(parents=True)
+    target.parent.mkdir(parents=True)
+    delegated_calls: list[list[str]] = []
+
+    monkeypatch.setattr(
+        module,
+        "_delegate",
+        lambda _app_root, arguments: delegated_calls.append(list(arguments)) or 0,
+    )
+
+    error: str | None = None
+    try:
+        module._restore_drill(
+            app_root,
+            package_path=package,
+            target_path=target,
+            smoke_port=18502,
+            expected_manifest_sha=None,
+            off_host_receipt_id=None,
+            acceptance_expectations=None,
+        )
+    except module.ControllerError as exc:
+        error = str(exc)
+
+    assert delegated_calls == []
+    assert error is not None
+    assert "pre-upgrade" in error or "finalized" in error
+
+
+@pytest.mark.parametrize(
+    "unsafe",
+    (
+        "package_outside",
+        "package_symlink",
+        "package_staging",
+        "package_nested",
+        "target_outside",
+        "target_incoming",
+        "target_nested",
+        "target_mismatch",
+        "target_symlink_parent",
+        "expectation_outside",
+        "expectation_symlink",
+        "expectation_nested",
+    ),
+)
+def test_restore_drill_controller_rejects_unsafe_paths_before_uv_delegation(
+    controller_env: ControllerEnv,
+    tmp_path: Path,
+    unsafe: str,
+) -> None:
+    backup_id = "backup-20260712"
+    package = controller_env.app_root / "backups" / backup_id
+    target = controller_env.app_root / "restore-drills/verified" / backup_id
+    expectation = controller_env.app_root / "evidence/runtime/exports/123e4567-e89b-42d3-a456-426614174000.json"
+    package.mkdir(parents=True)
+    target.parent.mkdir(parents=True)
+    expectation.parent.mkdir(parents=True)
+    expectation.write_text("{}\n", encoding="utf-8")
+
+    if unsafe == "package_outside":
+        package = tmp_path / "outside-package"
+        package.mkdir()
+    elif unsafe == "package_symlink":
+        outside = tmp_path / "linked-package"
+        outside.mkdir()
+        package.rmdir()
+        package.symlink_to(outside, target_is_directory=True)
+    elif unsafe == "package_staging":
+        package = controller_env.app_root / "backups/.staging" / backup_id
+        package.mkdir(parents=True)
+    elif unsafe == "package_nested":
+        package = controller_env.app_root / "backups/nested" / backup_id
+        package.mkdir(parents=True)
+    elif unsafe == "target_outside":
+        target = tmp_path / backup_id
+    elif unsafe == "target_incoming":
+        target = controller_env.app_root / "restore-drills/incoming" / backup_id
+    elif unsafe == "target_nested":
+        target = controller_env.app_root / "restore-drills/verified/nested" / backup_id
+    elif unsafe == "target_mismatch":
+        target = controller_env.app_root / "restore-drills/verified/different-id"
+    elif unsafe == "target_symlink_parent":
+        outside = tmp_path / "linked-target-parent"
+        outside.mkdir()
+        target.parent.rmdir()
+        target.parent.symlink_to(outside, target_is_directory=True)
+    elif unsafe == "expectation_outside":
+        expectation = tmp_path / expectation.name
+        expectation.write_text("{}\n", encoding="utf-8")
+    elif unsafe == "expectation_symlink":
+        outside = tmp_path / "linked-expectation.json"
+        outside.write_text("{}\n", encoding="utf-8")
+        expectation.unlink()
+        expectation.symlink_to(outside)
+    else:
+        expectation = controller_env.app_root / "evidence/runtime/exports/nested" / expectation.name
+        expectation.parent.mkdir()
+        expectation.write_text("{}\n", encoding="utf-8")
+
+    result = controller_env.run(
+        "restore-drill",
+        str(package),
+        "--target",
+        str(target),
+        "--acceptance-expectations",
+        str(expectation),
+    )
+
+    assert result.returncode != 0
+    assert not controller_env.uv_args_file.exists()

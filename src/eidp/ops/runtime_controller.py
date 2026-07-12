@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import secrets
 import stat
 import subprocess
@@ -40,6 +41,14 @@ from eidp.ops.runtime_process import (
 
 _DIRECTORY_FLAGS = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0)
 _NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
+_BACKUP_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,127}")
+_RESERVED_BACKUP_IDS = {".staging", "pre-upgrade"}
+
+
+def _validate_backup_id_leaf(value: str, *, label: str) -> str:
+    if _BACKUP_ID_PATTERN.fullmatch(value) is None or value in _RESERVED_BACKUP_IDS:
+        raise ControllerError(f"{label} {value!r} must be a valid non-reserved finalized backup ID")
+    return value
 
 
 def _project_relative_path(raw_path: Path, *, app_root: Path, label: str) -> Path:
@@ -136,12 +145,86 @@ def _backup_verify(app_root: Path, raw_path: Path) -> int:
     if (
         len(relative.parts) != 2
         or relative.parts[0] != "backups"
-        or relative.parts[1] in {".staging", "pre-upgrade"}
     ):
         raise ControllerError("backup-verify path must use the finalized backups/{backup_id} layout, never staging")
+    _validate_backup_id_leaf(relative.name, label="backup-verify package name")
     descriptor = _open_relative_directory(app_root, relative, create=False)
     os.close(descriptor)
     return _delegate(app_root, ["backup-verify", str(app_root / relative)])
+
+
+def _restore_path(raw_path: Path, *, app_root: Path, label: str) -> Path:
+    if ".." in raw_path.parts:
+        raise ControllerError(f"{label} path traversal is not allowed")
+    return _project_relative_path(raw_path, app_root=app_root, label=label)
+
+
+def _restore_drill(
+    app_root: Path,
+    *,
+    package_path: Path,
+    target_path: Path,
+    smoke_port: int,
+    expected_manifest_sha: str | None,
+    off_host_receipt_id: str | None,
+    acceptance_expectations: Path | None,
+) -> int:
+    package_relative = _restore_path(package_path, app_root=app_root, label="restore package")
+    package_parts = package_relative.parts
+    if not (
+        (len(package_parts) == 2 and package_parts[0] == "backups")
+        or (len(package_parts) == 3 and package_parts[:2] == ("restore-drills", "incoming"))
+    ):
+        raise ControllerError("restore package must use direct finalized backups/{id} or incoming/{id}")
+    backup_id = _validate_backup_id_leaf(package_relative.name, label="restore package name")
+    package_fd = _open_relative_directory(app_root, package_relative, create=False)
+    os.close(package_fd)
+
+    target_relative = _restore_path(target_path, app_root=app_root, label="restore target")
+    if (
+        len(target_relative.parts) != 3
+        or target_relative.parts[:2] != ("restore-drills", "verified")
+        or target_relative.name != backup_id
+    ):
+        raise ControllerError("restore target must use the exact verified/{backup_id} layout")
+    target_parent_fd = _open_relative_directory(app_root, Path("restore-drills/verified"), create=False)
+    os.close(target_parent_fd)
+    if os.path.lexists(app_root / target_relative):
+        target_fd = _open_relative_directory(app_root, target_relative, create=False)
+        os.close(target_fd)
+
+    expectation_path: Path | None = None
+    if acceptance_expectations is not None:
+        expectation_relative = _restore_path(
+            acceptance_expectations,
+            app_root=app_root,
+            label="restore acceptance expectation",
+        )
+        if (
+            len(expectation_relative.parts) != 4
+            or expectation_relative.parts[:3] != ("evidence", "runtime", "exports")
+            or expectation_relative.suffix != ".json"
+        ):
+            raise ControllerError("restore expectation must be a direct evidence/runtime/exports/{id}.json file")
+        expectation_fd = _open_project_regular_file(app_root / expectation_relative, app_root=app_root)
+        os.close(expectation_fd)
+        expectation_path = app_root / expectation_relative
+
+    delegated = [
+        "restore-drill",
+        str(app_root / package_relative),
+        "--target",
+        str(app_root / target_relative),
+        "--smoke-port",
+        str(smoke_port),
+    ]
+    if expected_manifest_sha is not None:
+        delegated.extend(("--expected-manifest-sha", expected_manifest_sha))
+    if off_host_receipt_id is not None:
+        delegated.extend(("--off-host-receipt-id", off_host_receipt_id))
+    if expectation_path is not None:
+        delegated.extend(("--acceptance-expectations", str(expectation_path)))
+    return _delegate(app_root, delegated)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -153,6 +236,13 @@ def _parser() -> argparse.ArgumentParser:
     backup_package.add_argument("--backup-id", required=True)
     backup_package.add_argument("--actor", required=True)
     commands.add_parser("backup-verify").add_argument("path", type=Path)
+    restore_drill = commands.add_parser("restore-drill")
+    restore_drill.add_argument("package_path", type=Path)
+    restore_drill.add_argument("--target", type=Path, required=True, dest="target_path")
+    restore_drill.add_argument("--smoke-port", type=int, default=18502)
+    restore_drill.add_argument("--expected-manifest-sha")
+    restore_drill.add_argument("--off-host-receipt-id")
+    restore_drill.add_argument("--acceptance-expectations", type=Path)
     commands.add_parser("start").add_argument("--health-timeout", type=float, default=30.0)
     commands.add_parser("status").add_argument("--json", action="store_true", dest="as_json")
     commands.add_parser("stop").add_argument("--timeout", type=float, default=10.0)
@@ -201,6 +291,16 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 )
             if parsed.command == "backup-verify":
                 return _backup_verify(app_root, parsed.path)
+            if parsed.command == "restore-drill":
+                return _restore_drill(
+                    app_root,
+                    package_path=parsed.package_path,
+                    target_path=parsed.target_path,
+                    smoke_port=parsed.smoke_port,
+                    expected_manifest_sha=parsed.expected_manifest_sha,
+                    off_host_receipt_id=parsed.off_host_receipt_id,
+                    acceptance_expectations=parsed.acceptance_expectations,
+                )
             if parsed.command == "start":
                 _start(app_root, load_runtime_config(app_root / ".env"), health_timeout=parsed.health_timeout)
                 return 0

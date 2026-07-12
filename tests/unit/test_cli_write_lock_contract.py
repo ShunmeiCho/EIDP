@@ -184,6 +184,25 @@ def test_backup_package_and_verify_commands_are_registered_with_correct_lock_sem
     assert not _calls_require_app_lock(commands["backup_verify"])
 
 
+def test_restore_drill_cli_is_read_only_to_live_state_and_calls_only_public_restore_interfaces() -> None:
+    module = ast.parse(Path("src/eidp/cli.py").read_text(encoding="utf-8"))
+    commands = {node.name: node for node in _typer_command_functions(module)}
+
+    assert "restore_drill" in commands
+    command = commands["restore_drill"]
+    call_names = {
+        name
+        for child in ast.walk(command)
+        if isinstance(child, ast.Call) and (name := _call_name(child.func)) is not None
+    }
+
+    assert "load_restore_evidence_expectation" in call_names
+    assert "run_restore_drill" in call_names
+    assert not _calls_require_app_lock(command)
+    assert not _calls_session_local(command)
+    assert not _contains_db_write_call(command)
+
+
 def test_session_cli_commands_are_classified_as_locked_write_or_read_only() -> None:
     """Future DB-backed CLI commands must not silently bypass lock review."""
 
