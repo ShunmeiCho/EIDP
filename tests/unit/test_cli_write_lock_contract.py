@@ -18,6 +18,7 @@ EXPECTED_CLI_SOURCES = {
 WRITE_HELPER_CALLS = frozenset(
     {
         "apply_prefecture_artifact",
+        "build_backup_package",
         "backup_sqlite_database",
         "bootstrap_sqlite",
         "crawl_missing_school_urls",
@@ -169,6 +170,18 @@ def test_write_cli_commands_acquire_shared_app_lock() -> None:
     ]
 
     assert missing == []
+
+
+def test_backup_package_and_verify_commands_are_registered_with_correct_lock_semantics() -> None:
+    module = ast.parse(Path("src/eidp/cli.py").read_text(encoding="utf-8"))
+    commands = {node.name: node for node in _typer_command_functions(module)}
+
+    assert "backup_package" in commands
+    assert _contains_db_write_call(commands["backup_package"])
+    assert _calls_require_app_lock(commands["backup_package"])
+    assert "backup_verify" in commands
+    assert not _contains_db_write_call(commands["backup_verify"])
+    assert not _calls_require_app_lock(commands["backup_verify"])
 
 
 def test_session_cli_commands_are_classified_as_locked_write_or_read_only() -> None:

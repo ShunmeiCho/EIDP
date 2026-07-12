@@ -42,16 +42,16 @@ _DIRECTORY_FLAGS = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_
 _NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
 
 
-def _project_relative_path(raw_path: Path, *, app_root: Path) -> Path:
+def _project_relative_path(raw_path: Path, *, app_root: Path, label: str) -> Path:
     candidate = raw_path if raw_path.is_absolute() else app_root / raw_path
     try:
         return Path(os.path.abspath(candidate)).relative_to(app_root)
     except ValueError as exc:
-        raise ControllerError("import-excel path must remain inside the project root") from exc
+        raise ControllerError(f"{label} path must remain inside the project root") from exc
 
 
 def _open_project_regular_file(raw_path: Path, *, app_root: Path) -> int:
-    relative = _project_relative_path(raw_path, app_root=app_root)
+    relative = _project_relative_path(raw_path, app_root=app_root, label="import-excel")
     if not relative.parts:
         raise ControllerError("import-excel path must be a regular file inside the project root")
     parent = Path(*relative.parts[:-1])
@@ -131,11 +131,28 @@ def _import_excel(app_root: Path, raw_path: Path) -> int:
         os.close(source_fd)
 
 
+def _backup_verify(app_root: Path, raw_path: Path) -> int:
+    relative = _project_relative_path(raw_path, app_root=app_root, label="backup-verify")
+    if (
+        len(relative.parts) != 2
+        or relative.parts[0] != "backups"
+        or relative.parts[1] in {".staging", "pre-upgrade"}
+    ):
+        raise ControllerError("backup-verify path must use the finalized backups/{backup_id} layout, never staging")
+    descriptor = _open_relative_directory(app_root, relative, create=False)
+    os.close(descriptor)
+    return _delegate(app_root, ["backup-verify", str(app_root / relative)])
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="eidpctl", description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("db-bootstrap")
     commands.add_parser("import-excel").add_argument("path", type=Path)
+    backup_package = commands.add_parser("backup-package")
+    backup_package.add_argument("--backup-id", required=True)
+    backup_package.add_argument("--actor", required=True)
+    commands.add_parser("backup-verify").add_argument("path", type=Path)
     commands.add_parser("start").add_argument("--health-timeout", type=float, default=30.0)
     commands.add_parser("status").add_argument("--json", action="store_true", dest="as_json")
     commands.add_parser("stop").add_argument("--timeout", type=float, default=10.0)
@@ -177,6 +194,13 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 return _delegate(app_root, ["db-bootstrap", "--sqlite"])
             if parsed.command == "import-excel":
                 return _import_excel(app_root, parsed.path)
+            if parsed.command == "backup-package":
+                return _delegate(
+                    app_root,
+                    ["backup-package", "--backup-id", parsed.backup_id, "--actor", parsed.actor],
+                )
+            if parsed.command == "backup-verify":
+                return _backup_verify(app_root, parsed.path)
             if parsed.command == "start":
                 _start(app_root, load_runtime_config(app_root / ".env"), health_timeout=parsed.health_timeout)
                 return 0

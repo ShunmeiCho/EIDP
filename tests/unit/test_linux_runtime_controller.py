@@ -355,6 +355,72 @@ def test_db_bootstrap_delegates_to_existing_locked_cli(controller_env: Controlle
     ]
 
 
+def test_backup_package_delegates_to_locked_cli(controller_env: ControllerEnv) -> None:
+    result = controller_env.run("backup-package", "--backup-id", "backup-20260712", "--actor", "operator")
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(controller_env.uv_args_file.read_text(encoding="utf-8")) == [
+        "run",
+        "--frozen",
+        "--no-sync",
+        "eidp",
+        "backup-package",
+        "--backup-id",
+        "backup-20260712",
+        "--actor",
+        "operator",
+    ]
+
+
+def test_backup_verify_delegates_only_project_local_package(controller_env: ControllerEnv) -> None:
+    package = controller_env.app_root / "backups" / "backup-20260712"
+    package.mkdir(parents=True)
+
+    result = controller_env.run("backup-verify", str(package))
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(controller_env.uv_args_file.read_text(encoding="utf-8")) == [
+        "run",
+        "--frozen",
+        "--no-sync",
+        "eidp",
+        "backup-verify",
+        str(package),
+    ]
+
+
+def test_backup_verify_rejects_staging_directory_even_when_project_local(controller_env: ControllerEnv) -> None:
+    staged = controller_env.app_root / "backups/.staging/backup-20260712"
+    staged.mkdir(parents=True)
+
+    result = controller_env.run("backup-verify", str(staged))
+
+    assert result.returncode != 0
+    assert "staging" in result.stderr or "finalized" in result.stderr
+    assert not controller_env.uv_args_file.exists()
+
+
+@pytest.mark.parametrize("unsafe_kind", ("outside", "symlink"))
+def test_backup_verify_rejects_outside_or_symlink_package(
+    controller_env: ControllerEnv,
+    tmp_path: Path,
+    unsafe_kind: str,
+) -> None:
+    outside = tmp_path / "outside-package"
+    outside.mkdir()
+    candidate = outside
+    if unsafe_kind == "symlink":
+        candidate = controller_env.app_root / "backups" / "linked"
+        candidate.parent.mkdir()
+        candidate.symlink_to(outside, target_is_directory=True)
+
+    result = controller_env.run("backup-verify", str(candidate))
+
+    assert result.returncode != 0
+    assert "project root" in result.stderr or "symlink" in result.stderr
+    assert not controller_env.uv_args_file.exists()
+
+
 def test_import_excel_delegates_project_local_regular_file_to_locked_cli(controller_env: ControllerEnv) -> None:
     workbook = controller_env.app_root / "data" / "incoming.xlsx"
     workbook.write_bytes(b"test workbook boundary")

@@ -475,6 +475,63 @@ def db_backup(
         typer.echo(f"SQLite backup written: {written}")
 
 
+@app.command("backup-package")
+def backup_package(
+    backup_id: str = typer.Option(..., "--backup-id", help="Stable finalized backup package ID."),
+    actor: str = typer.Option(..., "--actor", help="Operator identity recorded in backup evidence."),
+) -> None:
+    """Build and finalize an allowlisted recovery package under backups/."""
+    with _require_app_lock("cli_backup_package"):
+        from eidp.config import settings
+        from eidp.db.sqlite_backup import sqlite_path_from_database_url
+        from eidp.ops.backup_package import BackupPackageError, build_backup_package
+
+        try:
+            result = build_backup_package(
+                app_root=Path(settings.app_root),
+                database_path=sqlite_path_from_database_url(settings.database_url),
+                backup_id=backup_id,
+                deployment_manifest=Path(settings.app_root) / "run/deployment-manifest.json",
+                actor=actor,
+            )
+        except (BackupPackageError, ValueError) as exc:
+            typer.echo(f"ERROR: backup package failed: {exc}", err=True)
+            raise typer.Exit(2) from exc
+
+    typer.echo(
+        json.dumps(
+            {
+                "backup_id": result.backup_id,
+                "finalized_path": str(result.finalized_path),
+                "manifest_sha256": result.manifest_sha256,
+            },
+            sort_keys=True,
+        )
+    )
+
+
+@app.command("backup-verify")
+def backup_verify(path: Path = typer.Argument(..., help="Finalized package directory to verify.")) -> None:
+    """Read-only verification of a finalized recovery package."""
+    from eidp.ops.backup_package import BackupPackageError, verify_backup_package
+
+    try:
+        result = verify_backup_package(path)
+    except BackupPackageError as exc:
+        typer.echo(f"ERROR: backup verification failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(
+        json.dumps(
+            {
+                "backup_id": result.backup_id,
+                "finalized_path": str(result.finalized_path),
+                "manifest_sha256": result.manifest_sha256,
+            },
+            sort_keys=True,
+        )
+    )
+
+
 @app.command()
 def rebuild_school_year_tasks(
     fiscal_year: int | None = typer.Option(

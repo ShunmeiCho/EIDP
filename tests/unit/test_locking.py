@@ -17,12 +17,13 @@ from __future__ import annotations
 
 import multiprocessing
 import os
+import threading
 import time
 from pathlib import Path
 
 import pytest
 
-from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
+from eidp.db.locking import LockBusyError, acquire_lock, probe_lock, require_lock_held
 
 
 def test_acquire_lock_basic_round_trip(tmp_path: Path):
@@ -94,6 +95,60 @@ def test_lock_releases_on_context_exit(tmp_path: Path):
     with acquire_lock(lock_path, owner="B"):
         status = probe_lock(lock_path)
         assert status.owner == "B"
+
+
+def test_require_lock_held_is_current_thread_and_context_scoped(tmp_path: Path) -> None:
+    lock_path = tmp_path / ".lock"
+    failures: list[BaseException] = []
+
+    with pytest.raises(RuntimeError, match="lock.*held|held.*lock"):
+        require_lock_held(lock_path)
+
+    with acquire_lock(lock_path, owner="proof"):
+        require_lock_held(lock_path)
+
+        def cross_thread() -> None:
+            try:
+                require_lock_held(lock_path)
+            except BaseException as exc:  # noqa: BLE001 - assertion captures the public failure
+                failures.append(exc)
+
+        thread = threading.Thread(target=cross_thread)
+        thread.start()
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+        assert len(failures) == 1
+        assert isinstance(failures[0], RuntimeError)
+
+    with pytest.raises(RuntimeError, match="lock.*held|held.*lock"):
+        require_lock_held(lock_path)
+
+
+@pytest.mark.parametrize("invalid_proof", ("pid", "closed_fd", "replaced_path", "symlink_path"))
+def test_require_lock_held_revalidates_live_lock_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    invalid_proof: str,
+) -> None:
+    from eidp.db import locking
+
+    lock_path = tmp_path / ".lock"
+    outside = tmp_path / "outside.lock"
+    with acquire_lock(lock_path, owner="proof"):
+        if invalid_proof == "pid":
+            real_getpid = locking.os.getpid
+            monkeypatch.setattr(locking.os, "getpid", lambda: real_getpid() + 1)
+        elif invalid_proof == "closed_fd":
+            monkeypatch.setattr(locking.os, "fstat", lambda _fd: (_ for _ in ()).throw(OSError("closed")))
+        else:
+            lock_path.rename(outside)
+            if invalid_proof == "replaced_path":
+                lock_path.write_bytes(b"replacement")
+            else:
+                lock_path.symlink_to(outside)
+
+        with pytest.raises(RuntimeError, match="lock.*held|held.*lock|identity|descriptor|path"):
+            require_lock_held(lock_path)
 
 
 def test_probe_returns_unheld_when_no_lock_file(tmp_path: Path):
