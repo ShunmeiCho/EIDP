@@ -17,6 +17,8 @@
 - Process operations verify PID, Linux start time, app root and argv marker before signalling.
 - Backup packaging holds `data/.lock`, reuses `backup_sqlite_database()`, stages and verifies before atomic finalization.
 - Same-host backups are not disaster recovery; only an ICT off-host receipt closes the v1 recovery gate.
+- Preserve append-only business and audit contracts: fiscal-year corrections use `revision++` plus demotion rather than in-place updates; `action_id` remains the unique idempotency key and each action produces at most one JSONL projection across active and archived outbox files; any `identity_source` change is additive and nullable with no historical backfill or table rebuild.
+- Never delete the red-line facts of record: `data/eidp.sqlite3`, `data/audit/manual-actions.jsonl`, or `data/master.xlsx`; `data/master.xlsx` remains read-only.
 - Use one short-lived Phase 1 branch for Tasks 1–6; it is review transport, not another product line.
 
 Before Task 1:
