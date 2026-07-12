@@ -79,8 +79,9 @@ other local Venus accounts, so it is not an identity boundary by itself.
 The preferred ingress is a dedicated internal hostname serving `/`. If ICT can
 only provide `/eidp/`, the proxy prefix and Streamlit `server.baseUrlPath` must
 match, `/eidp` redirects to `/eidp/`, and `_stcore`/static paths retain the
-prefix. Launcher support for `baseUrlPath`, the public browser address and
-explicit CORS origins is pending and release blocking. The proxy must support
+prefix. Runtime support for `baseUrlPath`, the public browser address and
+explicit CORS origins is **AVAILABLE**. ICT proxy configuration and deployment
+evidence remain **PENDING** and release blocking. The proxy must support
 WebSocket upgrade, preserve the public
 host/port/scheme, keep XSRF/CORS enabled, use a body limit above the application
 file limit and apply an explicit health-probe policy.

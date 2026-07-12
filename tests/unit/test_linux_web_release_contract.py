@@ -99,6 +99,9 @@ def test_venus_runbook_marks_runtime_controller_available_without_changing_relea
 
 def test_reverse_proxy_doc_marks_runtime_url_settings_available_but_ict_pending() -> None:
     requirements = Path("deploy/linux/reverse-proxy-requirements.md").read_text(encoding="utf-8")
+    design = Path("docs/superpowers/specs/2026-07-12-linux-web-v1-venus-design.md").read_text(encoding="utf-8")
+    ingress = design.split("## 3. Access Architecture", maxsplit=1)[1].split("## 4. Identity And Audit", maxsplit=1)[0]
+    normalized_ingress = " ".join(ingress.split())
 
     assert "ICT CONFIGURATION AND APP IDENTITY SUPPORT PENDING" in requirements
     assert "EIDP remains `NOT_READY`" in requirements
@@ -108,6 +111,14 @@ def test_reverse_proxy_doc_marks_runtime_url_settings_available_but_ict_pending(
     )
     assert "the runtime controller passes the validated settings to `run_web.sh`" in requirements
     assert "Application support for `baseUrlPath`" not in requirements
+    assert (
+        "Runtime support for `baseUrlPath`, the public browser address and explicit CORS origins is **AVAILABLE**"
+        in normalized_ingress
+    )
+    assert (
+        "ICT proxy configuration and deployment evidence remain **PENDING** and release blocking" in normalized_ingress
+    )
+    assert "Launcher support for `baseUrlPath`" not in normalized_ingress
 
 
 def test_venus_environment_template_uses_authorized_project_root() -> None:
