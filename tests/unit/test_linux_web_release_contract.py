@@ -26,7 +26,8 @@ def test_linux_launcher_sets_app_root_and_stays_loopback_bound() -> None:
     assert "--server.address 127.0.0.1" in launcher
     assert "EIDP_WEB_PORT" not in launcher
     assert "--server.port" not in launcher
-    assert 'export STREAMLIT_SERVER_PORT="${STREAMLIT_SERVER_PORT:-8502}"' in launcher
+    assert '${STREAMLIT_SERVER_PORT:?' in launcher
+    assert "${STREAMLIT_SERVER_PORT:-" not in launcher
 
 
 def test_eidpctl_is_exact_thin_boundary_and_delegation() -> None:
@@ -52,6 +53,63 @@ def test_runtime_artifact_directories_are_ignored() -> None:
     assert "/restore-drills/" in ignored
 
 
+def test_runtime_design_states_the_deployment_uid_trust_boundary() -> None:
+    design = Path("docs/superpowers/specs/2026-07-12-linux-web-v1-venus-design.md").read_text(encoding="utf-8")
+    process_boundary = design.split("### 6.2 Project boundary", maxsplit=1)[1].split(
+        "### 6.4 Deployment manifest", maxsplit=1
+    )[0]
+
+    assert "deployment Unix UID and its processes are the v1 runtime trust boundary" in process_boundary
+    assert "must not be shared with untrusted workloads" in process_boundary
+    assert "does not make every Venus local account trusted" in process_boundary
+    assert "deployment is not accepted" in process_boundary
+    assert "dedicated service account" in process_boundary
+    assert "cgroup" in process_boundary
+    assert "fd-aware import" in process_boundary
+
+
+def test_operator_docs_use_only_eidpctl_for_runtime_lifecycle() -> None:
+    operator_docs = (
+        "README.md",
+        "docs/runbooks/linux-web-dev-run.md",
+        "deploy/linux/server-requirements.md",
+    )
+    for path in operator_docs:
+        body = Path(path).read_text(encoding="utf-8")
+        normalized = " ".join(body.split())
+
+        for command in ("start", "status", "health", "stop", "restart"):
+            assert f"deploy/linux/eidpctl.sh {command}" in body
+        assert "EIDP_WEB_PORT" in body
+        assert ".env" in body
+        assert "run_web.sh` is reserved for the internal CI smoke" in normalized
+
+
+def test_venus_runbook_marks_runtime_controller_available_without_changing_release_forecast() -> None:
+    runbook = Path("docs/runbooks/venus-init-and-acceptance.md").read_text(encoding="utf-8")
+
+    assert "Release forecast: **NOT_READY**" in runbook
+    assert "**AVAILABLE — project-local controller.**" in runbook
+    assert "**AVAILABLE:** the project-local controller parses only" in runbook
+    assert "**AVAILABLE:** `deploy/linux/eidpctl.sh` is the runtime lifecycle entrypoint" in runbook
+    assert "**PENDING — project-local controller.**" not in runbook
+    assert "**PENDING:** the project-local controller must parse only" not in runbook
+    assert "**PENDING:** implement `deploy/linux/eidpctl.sh`" not in runbook
+
+
+def test_reverse_proxy_doc_marks_runtime_url_settings_available_but_ict_pending() -> None:
+    requirements = Path("deploy/linux/reverse-proxy-requirements.md").read_text(encoding="utf-8")
+
+    assert "ICT CONFIGURATION AND APP IDENTITY SUPPORT PENDING" in requirements
+    assert "EIDP remains `NOT_READY`" in requirements
+    assert (
+        "Application support for the base path, public browser address and explicit CORS origins is **AVAILABLE**"
+        in requirements
+    )
+    assert "the runtime controller passes the validated settings to `run_web.sh`" in requirements
+    assert "Application support for `baseUrlPath`" not in requirements
+
+
 def test_venus_environment_template_uses_authorized_project_root() -> None:
     environment = Path("deploy/linux/env.example").read_text(encoding="utf-8")
 
@@ -72,3 +130,4 @@ def test_ci_has_no_windows_packaging_or_stage6_gate() -> None:
     assert all(token not in workflow for token in forbidden)
     assert "tests/integration/test_linux_web_e2e_chain.py" in workflow
     assert "Streamlit loopback health smoke" in workflow
+    assert "STREAMLIT_SERVER_PORT=8502 deploy/linux/run_web.sh" in workflow

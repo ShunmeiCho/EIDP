@@ -20,9 +20,10 @@ from unpublished local commits.
    `Ship gate contract` green. A local `main` commit is not deployable evidence.
 2. **AVAILABLE — locked dependencies.** The selected commit must contain
    `uv.lock`; installation uses `uv sync --frozen`.
-3. **PENDING — project-local controller.** `deploy/linux/eidpctl.sh` must provide
-   start/status/stop/restart, DB bootstrap, PID validation, single-instance
-   protection and bounded stdout logging before operational acceptance.
+3. **AVAILABLE — project-local controller.** `deploy/linux/eidpctl.sh` provides
+   start/status/health/stop/restart, DB bootstrap, PID validation,
+   single-instance protection and bounded stdout logging. Venus runtime evidence
+   is still required before operational acceptance.
 4. **ICT — approved ingress.** ICT must provide the exact internal URL, TLS,
    allowlist/authentication, WebSocket-capable reverse proxy and health-probe
    policy described in `deploy/linux/reverse-proxy-requirements.md`.
@@ -81,12 +82,11 @@ files and the runtime home below the project root. The v1 main lane installs the
 
 - `deploy/linux/project_env.sh` is a Bash library used by Bash wrappers. An
   operator must not source it from an arbitrary interactive shell.
-- `.env` is read by Python settings. It does **not** currently populate shell
-  variables used by `run_web.sh`.
-- **PENDING:** the project-local controller must parse only
+- `.env` is read as data by Python; operators do not source it as shell code.
+- **AVAILABLE:** the project-local controller parses only
   `EIDP_WEB_PORT`, `EIDP_WEB_BASE_URL_PATH`, `EIDP_INTERNAL_BASE_URL` and
-  `EIDP_WEB_MAX_UPLOAD_MB` from `.env`, validate them and pass them to the
-  launcher. It must not execute `.env` as shell code.
+  `EIDP_WEB_MAX_UPLOAD_MB` from `.env`, validates them and passes them to the
+  launcher. It does not execute `.env` as shell code.
 - Port defaults to 8502. `--server.address 127.0.0.1` remains hard-coded and is
   not configurable in v1. `EIDP_WEB_BIND` must not be presented as effective.
 - Root hosting is preferred. If ICT requires `/eidp/`, the controller must set
@@ -95,8 +95,8 @@ files and the runtime home below the project root. The v1 main lane installs the
 
 ### 1.5 Database and application startup
 
-**PENDING:** implement `deploy/linux/eidpctl.sh` before using this runbook for
-acceptance. Its public operations are:
+**AVAILABLE:** `deploy/linux/eidpctl.sh` is the runtime lifecycle entrypoint.
+Its public operations are:
 
 ```text
 deploy/linux/eidpctl.sh db-bootstrap
@@ -115,8 +115,8 @@ It must also:
 - reject a second instance;
 - detect and remove only a verified stale PID file;
 - verify that a live PID belongs to this checkout before stop/restart;
-- keep `run/eidp.pid` below the root and rotate `logs/web.log` at 10 MiB with
-  no more than five retained files (50 MiB total);
+- keep `run/eidp.pid.json` below the root and rotate `logs/web.log` at 10 MiB
+  with no more than five retained backups plus the active log;
 - preserve the 127.0.0.1 bind;
 - expose a loopback health check at `/_stcore/health`.
 

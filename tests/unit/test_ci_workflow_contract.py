@@ -26,6 +26,7 @@ def test_ci_preserves_required_check_name_with_linux_web_contract() -> None:
     assert "tests/integration/test_linux_web_e2e_chain.py" in WORKFLOW
     assert "Web entry-point import smoke" in WORKFLOW
     assert "Streamlit loopback health smoke" in WORKFLOW
+    assert "STREAMLIT_SERVER_PORT=8502 deploy/linux/run_web.sh" in WORKFLOW
     assert "http://127.0.0.1:8502/_stcore/health" in WORKFLOW
 
 
