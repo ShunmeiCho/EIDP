@@ -250,6 +250,22 @@ def test_present_optional_roots_are_inventoried_while_arbitrary_trees_and_sqlite
     assert not any(path.startswith("backups/") for path in inventory_paths)
 
 
+def test_build_preserves_optional_root_presence_but_prunes_empty_descendant_directories(package_root: Path) -> None:
+    (package_root / "data/audit/empty/nested").mkdir(parents=True)
+    (package_root / "data/web-intake/only-empty/nested").mkdir(parents=True)
+
+    built = _build(package_root, "backup-empty-directories")
+    manifest = _manifest(built.finalized_path)
+
+    assert manifest["optional_roots"]["data/audit"] is True
+    assert manifest["optional_roots"]["data/web-intake"] is True
+    assert (built.finalized_path / "data/audit").is_dir()
+    assert (built.finalized_path / "data/web-intake").is_dir()
+    assert not (built.finalized_path / "data/audit/empty").exists()
+    assert not (built.finalized_path / "data/web-intake/only-empty").exists()
+    assert verify_backup_package(built.finalized_path) == built
+
+
 def test_verify_is_read_only_and_checks_packaged_sqlite(package_root: Path) -> None:
     built = _build(package_root)
     before = _tree_bytes(built.finalized_path)

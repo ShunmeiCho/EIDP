@@ -322,7 +322,8 @@ def _copy_optional_directory(source: Path, target: Path, *, root: Path) -> None:
         raise BackupPackageError("optional source root must remain inside the project root") from exc
     target.mkdir(parents=True, exist_ok=False)
 
-    def visit(current_source: Path, current_target: Path) -> None:
+    def visit(current_source: Path, current_target: Path) -> bool:
+        copied_file = False
         try:
             entries = sorted(os.scandir(current_source), key=lambda entry: entry.name)
         except OSError as exc:
@@ -338,11 +339,16 @@ def _copy_optional_directory(source: Path, target: Path, *, root: Path) -> None:
             destination = current_target / entry.name
             if stat.S_ISDIR(entry_stat.st_mode):
                 destination.mkdir(mode=0o700)
-                visit(entry_path, destination)
+                if visit(entry_path, destination):
+                    copied_file = True
+                else:
+                    destination.rmdir()
             elif stat.S_ISREG(entry_stat.st_mode):
                 _copy_regular_file(entry_path, destination, root=root)
+                copied_file = True
             else:
                 raise BackupPackageError(f"unsafe non-regular entry in optional allowlisted root: {entry_path}")
+        return copied_file
 
     visit(source, target)
 
