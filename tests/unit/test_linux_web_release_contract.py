@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 
@@ -23,6 +24,32 @@ def test_linux_launcher_sets_app_root_and_stays_loopback_bound() -> None:
     assert 'export HOME="${APP_ROOT}/.home"' in environment
     assert "src/eidp/web/app.py" in launcher
     assert "--server.address 127.0.0.1" in launcher
+    assert "EIDP_WEB_PORT" not in launcher
+    assert "--server.port" not in launcher
+    assert 'export STREAMLIT_SERVER_PORT="${STREAMLIT_SERVER_PORT:-8502}"' in launcher
+
+
+def test_eidpctl_is_exact_thin_boundary_and_delegation() -> None:
+    controller = Path("deploy/linux/eidpctl.sh")
+
+    assert controller.read_text(encoding="utf-8") == """#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=project_env.sh
+source "${SCRIPT_DIR}/project_env.sh"
+cd "${APP_ROOT}"
+exec uv run --frozen --no-sync python -m eidp.ops.runtime_controller "$@"
+"""
+    assert os.access(controller, os.X_OK)
+
+
+def test_runtime_artifact_directories_are_ignored() -> None:
+    ignored = Path(".gitignore").read_text(encoding="utf-8").splitlines()
+
+    assert "/run/" in ignored
+    assert "/backups/" in ignored
+    assert "/evidence/runtime/" in ignored
+    assert "/restore-drills/" in ignored
 
 
 def test_venus_environment_template_uses_authorized_project_root() -> None:

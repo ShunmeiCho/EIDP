@@ -35,6 +35,10 @@ htmlcov/
 _temp/
 logs
 logs/
+/run/
+/backups/
+/evidence/runtime/
+/restore-drills/
 
 # Secrets / environment
 .env

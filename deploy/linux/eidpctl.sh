@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=project_env.sh
 source "${SCRIPT_DIR}/project_env.sh"
-export STREAMLIT_SERVER_PORT="${STREAMLIT_SERVER_PORT:-8502}"
-
 cd "${APP_ROOT}"
-exec uv run --frozen --no-sync streamlit run src/eidp/web/app.py \
-  --server.address 127.0.0.1
+exec uv run --frozen --no-sync python -m eidp.ops.runtime_controller "$@"
