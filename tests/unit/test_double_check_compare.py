@@ -129,33 +129,54 @@ def test_missing_rows_are_categorized() -> None:
     assert all(row.comparison_result == "FALSE" for row in result)
 
 
-def test_ambiguous_reviewed_keys_are_not_comparable() -> None:
+def test_reviewed_only_duplicate_candidates_are_all_preserved() -> None:
     result = compare_external_to_reviewed(
         _reviewed(
             _record(ReviewStatus.ACCEPTED, review_id="review-a", extracted_value=37),
             _record(ReviewStatus.CORRECTED, review_id="review-b", extracted_value=38, corrected_value=39),
         ),
-        [_external(value=37)],
+        [],
     )
 
-    assert [row.comparison_status for row in result] == [
-        DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE,
-        DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE,
-    ]
+    assert [row.review_id for row in result] == ["review-a", "review-b"]
+    assert [row.eidp_value for row in result] == [37, 39]
+    assert [row.external_value for row in result] == [None, None]
+    assert all(row.comparison_status == DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE for row in result)
     assert all(row.comparison_result == "" for row in result)
     assert all(not row.excel_ready for row in result)
 
 
-def test_duplicate_external_keys_are_not_comparable() -> None:
+def test_external_only_duplicate_candidates_are_all_preserved() -> None:
     result = compare_external_to_reviewed(
-        _reviewed(_record(ReviewStatus.ACCEPTED, extracted_value=37)),
+        [],
         [_external(value=37, source_row_number=2), _external(value=38, source_row_number=3)],
     )
 
-    assert len(result) == 1
-    assert result[0].comparison_status == DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE
-    assert result[0].comparison_result == ""
-    assert result[0].mismatch_reason == "duplicate external rows=2"
+    assert [row.review_id for row in result] == [None, None]
+    assert [row.eidp_value for row in result] == [None, None]
+    assert [row.external_value for row in result] == [37, 38]
+    assert [row.source_row_number for row in result] == [2, 3]
+    assert all(row.comparison_status == DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE for row in result)
+    assert all(row.mismatch_reason == "duplicate external rows=2" for row in result)
+
+
+def test_both_side_duplicate_candidates_are_separate_and_all_preserved() -> None:
+    result = compare_external_to_reviewed(
+        _reviewed(
+            _record(ReviewStatus.ACCEPTED, review_id="review-b", extracted_value=38),
+            _record(ReviewStatus.ACCEPTED, review_id="review-a", extracted_value=37),
+        ),
+        [_external(value=38, source_row_number=3), _external(value=37, source_row_number=2)],
+    )
+
+    assert [(row.review_id, row.eidp_value, row.external_value, row.source_row_number) for row in result] == [
+        ("review-a", 37, None, None),
+        ("review-b", 38, None, None),
+        (None, None, 37, 2),
+        (None, None, 38, 3),
+    ]
+    assert all(row.comparison_status == DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE for row in result)
+    assert all(row.mismatch_reason == "duplicate reviewed rows=2; duplicate external rows=2" for row in result)
 
 
 def test_cross_side_course_granularity_collision_is_not_certified_true() -> None:
@@ -214,6 +235,7 @@ def test_comparison_report_includes_eidp_external_and_evidence_columns() -> None
 
     assert rows[0]["comparison_result"] == "FALSE"
     assert rows[0]["comparison_status"] == "value_mismatch"
+    assert rows[0]["review_id"] == "review-001"
     assert rows[0]["excel_ready"] == "False"
     assert rows[0]["eidp_value"] == "41"
     assert rows[0]["external_value"] == "40"

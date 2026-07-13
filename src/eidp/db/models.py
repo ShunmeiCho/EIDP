@@ -3,16 +3,20 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    DDL,
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
     String,
     Text,
     UniqueConstraint,
+    event,
     func,
     text,
 )
@@ -452,6 +456,13 @@ class ExtractionReviewDecision(Base):
             "revision",
             name="uq_extraction_review_decision_review_revision",
         ),
+        Index(
+            "uq_extraction_review_decision_provenance",
+            "review_id",
+            "revision",
+            "audit_action_id",
+            unique=True,
+        ),
         CheckConstraint(
             "decision != 'exclude' OR "
             "length(trim(coalesce(note, ''))) BETWEEN 1 AND 500",
@@ -459,3 +470,198 @@ class ExtractionReviewDecision(Base):
         ),
         {"comment": "Append-only audited extraction review decisions"},
     )
+
+
+class ExternalComparisonRun(Base):
+    """One immutable comparison of reviewed EIDP rows to an external file."""
+
+    __tablename__ = "external_comparison_run"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    source_system: Mapped[str] = mapped_column(String(32), nullable=False)
+    external_file_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    original_filename: Mapped[str] = mapped_column(Text, nullable=False)
+    external_file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    report_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    report_path: Mapped[str] = mapped_column(Text, nullable=False)
+    actor: Mapped[str] = mapped_column(String(50), nullable=False)
+    identity_source: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("run_id", name="uq_external_comparison_run_run_id"),
+        UniqueConstraint(
+            "run_id",
+            "external_file_sha256",
+            name="uq_external_comparison_run_run_hash",
+        ),
+        CheckConstraint(
+            "source_system IN ('copilot', 'notebooklm', 'manual_external')",
+            name="ck_external_comparison_run_source_system",
+        ),
+        CheckConstraint(
+            "length(external_file_sha256) = 64",
+            name="ck_external_comparison_run_file_sha256",
+        ),
+        CheckConstraint(
+            "length(report_sha256) = 64",
+            name="ck_external_comparison_run_report_sha256",
+        ),
+        Index("ix_external_comparison_run_external_file_sha256", "external_file_sha256"),
+        {"comment": "Immutable external comparison run and content-addressed artifacts"},
+    )
+
+
+class ExternalComparisonResult(Base):
+    """Immutable snapshot of one row emitted by an external comparison run."""
+
+    __tablename__ = "external_comparison_result"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("external_comparison_run.run_id"), nullable=False)
+    row_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    comparison_key: Mapped[str] = mapped_column(Text, nullable=False)
+    review_id: Mapped[str | None] = mapped_column(String(80))
+    review_decision_revision: Mapped[int | None] = mapped_column(Integer)
+    review_audit_action_id: Mapped[str | None] = mapped_column(String(36))
+    external_source_row_key: Mapped[str | None] = mapped_column(Text)
+    external_value: Mapped[int | float | str | None] = mapped_column(JSON(none_as_null=True))
+    external_file_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    eidp_value: Mapped[int | float | str | None] = mapped_column(JSON(none_as_null=True))
+    comparison_status: Mapped[str] = mapped_column(String(48), nullable=False)
+    mismatch_reason: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "run_id",
+            "row_key",
+            name="uq_external_comparison_result_run_row",
+        ),
+        CheckConstraint(
+            "comparison_status IN ("
+            "'match', 'value_mismatch', 'missing_in_eidp', 'missing_in_external', "
+            "'ambiguous_key_not_comparable', 'needs_review_not_comparable', "
+            "'excluded_not_comparable')",
+            name="ck_external_comparison_result_status",
+        ),
+        CheckConstraint(
+            "length(external_file_sha256) = 64",
+            name="ck_external_comparison_result_file_sha256",
+        ),
+        CheckConstraint(
+            "review_decision_revision IS NULL OR review_decision_revision >= 1",
+            name="ck_external_comparison_result_review_revision",
+        ),
+        CheckConstraint(
+            "(review_decision_revision IS NULL AND review_audit_action_id IS NULL) OR "
+            "(review_id IS NOT NULL AND review_decision_revision IS NOT NULL "
+            "AND review_audit_action_id IS NOT NULL)",
+            name="ck_external_comparison_result_review_provenance",
+        ),
+        ForeignKeyConstraint(
+            ["run_id", "external_file_sha256"],
+            [
+                "external_comparison_run.run_id",
+                "external_comparison_run.external_file_sha256",
+            ],
+            name="fk_external_comparison_result_run_hash",
+        ),
+        ForeignKeyConstraint(
+            ["review_id", "review_decision_revision", "review_audit_action_id"],
+            [
+                "extraction_review_decision.review_id",
+                "extraction_review_decision.revision",
+                "extraction_review_decision.audit_action_id",
+            ],
+            name="fk_external_comparison_result_review_provenance",
+        ),
+        {"comment": "Immutable per-row external comparison snapshot"},
+    )
+
+
+class DoubleCheckResolution(Base):
+    """Append-only audited human resolution of one comparison result snapshot."""
+
+    __tablename__ = "double_check_resolution"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    resolution_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    comparison_result_id: Mapped[int] = mapped_column(
+        ForeignKey("external_comparison_result.id"),
+        nullable=False,
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    outcome: Mapped[str] = mapped_column(String(24), nullable=False)
+    corrected_value: Mapped[int | None] = mapped_column(Integer)
+    effective_value: Mapped[int | None] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    actor: Mapped[str] = mapped_column(String(50), nullable=False)
+    identity_source: Mapped[str] = mapped_column(String(32), nullable=False)
+    audit_action_id: Mapped[str] = mapped_column(
+        ForeignKey("manual_action_log.action_id"),
+        nullable=False,
+    )
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("resolution_id", name="uq_double_check_resolution_resolution_id"),
+        UniqueConstraint("audit_action_id", name="uq_double_check_resolution_audit_action_id"),
+        UniqueConstraint(
+            "comparison_result_id",
+            "revision",
+            name="uq_double_check_resolution_result_revision",
+        ),
+        CheckConstraint("revision >= 1", name="ck_double_check_resolution_revision"),
+        CheckConstraint(
+            "outcome IN ('accept_eidp', 'accept_external', 'correct', 'exclude')",
+            name="ck_double_check_resolution_outcome",
+        ),
+        CheckConstraint(
+            "length(trim(coalesce(reason, ''))) BETWEEN 1 AND 500",
+            name="ck_double_check_resolution_reason",
+        ),
+        CheckConstraint(
+            "(outcome = 'accept_eidp' AND corrected_value IS NULL AND effective_value IS NOT NULL) OR "
+            "(outcome = 'accept_external' AND corrected_value IS NOT NULL "
+            "AND effective_value = corrected_value) OR "
+            "(outcome = 'correct' AND corrected_value IS NOT NULL AND corrected_value >= 0 "
+            "AND effective_value = corrected_value) OR "
+            "(outcome = 'exclude' AND corrected_value IS NULL AND effective_value IS NULL)",
+            name="ck_double_check_resolution_value_contract",
+        ),
+        {"comment": "Append-only audited double-check resolutions"},
+    )
+
+
+_TASK5_IMMUTABLE_MODELS = (
+    ExternalComparisonRun,
+    ExternalComparisonResult,
+    DoubleCheckResolution,
+)
+
+for _immutable_model in _TASK5_IMMUTABLE_MODELS:
+    for _operation in ("UPDATE", "DELETE"):
+        _table_name = _immutable_model.__tablename__
+        _trigger_name = f"trg_{_table_name}_immutable_{_operation.lower()}"
+        event.listen(
+            _immutable_model.__table__,
+            "after_create",
+            DDL(  # type: ignore[no-untyped-call]  # SQLAlchemy ships this callable untyped
+                f"""
+                CREATE TRIGGER IF NOT EXISTS {_trigger_name}
+                BEFORE {_operation} ON {_table_name}
+                BEGIN
+                    SELECT RAISE(ABORT, '{_table_name} is immutable');
+                END
+                """
+            ).execute_if(dialect="sqlite"),
+        )

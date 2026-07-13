@@ -46,6 +46,7 @@ class DoubleCheckStatus(StrEnum):
 
 DOUBLE_CHECK_REPORT_COLUMNS: tuple[str, ...] = (
     "key",
+    "review_id",
     "comparison_result",
     "comparison_status",
     "mismatch_reason",
@@ -85,6 +86,7 @@ _DoubleCheckKey = tuple[str, str, str, int, str]
 @dataclass(frozen=True)
 class DoubleCheckResultRow:
     key: str
+    review_id: str | None
     school_name: str
     school_id: str | None
     fiscal_year: int
@@ -260,6 +262,7 @@ def _result_row(
     key = _reviewed_key(reviewed_row)
     return DoubleCheckResultRow(
         key=join_key_label(key),
+        review_id=reviewed_row.review_id,
         school_name=reviewed_row.school_name,
         school_id=reviewed_row.school_id,
         fiscal_year=reviewed_row.fiscal_year,
@@ -302,6 +305,7 @@ def _external_only_row(
     key = _external_key(external_row)
     return DoubleCheckResultRow(
         key=join_key_label(key),
+        review_id=None,
         school_name=external_row.school_name,
         school_id=external_row.school_id,
         fiscal_year=external_row.fiscal_year,
@@ -347,16 +351,18 @@ def _ambiguous_rows(
     if len(external_rows) > 1:
         reason_parts.append(f"duplicate external rows={len(external_rows)}")
     reason = "; ".join(reason_parts)
-    if reviewed_rows:
-        external = external_rows[0] if len(external_rows) == 1 else None
-        return [
-            _result_row(row, external, DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE, reason)
-            for row in reviewed_rows
-        ]
-    return [
-        _external_only_row(external, DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE, reason)
-        for external in external_rows
+    reviewed_candidates = [
+        _result_row(row, None, DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE, reason)
+        for row in sorted(reviewed_rows, key=lambda row: row.review_id)
     ]
+    external_candidates = [
+        _external_only_row(row, DoubleCheckStatus.AMBIGUOUS_KEY_NOT_COMPARABLE, reason)
+        for row in sorted(
+            external_rows,
+            key=lambda row: (row.source_file, row.source_row_number, repr(row.value)),
+        )
+    ]
+    return [*reviewed_candidates, *external_candidates]
 
 
 def _truth_label(status: DoubleCheckStatus) -> str:
@@ -374,6 +380,7 @@ def _truth_label(status: DoubleCheckStatus) -> str:
 def _report_row(row: DoubleCheckResultRow) -> dict[str, object]:
     return {
         "key": row.key,
+        "review_id": row.review_id or "",
         "comparison_result": row.comparison_result,
         "comparison_status": row.comparison_status.value,
         "mismatch_reason": row.mismatch_reason,
