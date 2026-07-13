@@ -20,9 +20,10 @@ from unpublished local commits.
    `Ship gate contract` green. A local `main` commit is not deployable evidence.
 2. **AVAILABLE — locked dependencies.** The selected commit must contain
    `uv.lock`; installation uses `uv sync --frozen`.
-3. **PENDING — project-local controller.** `deploy/linux/eidpctl.sh` must provide
-   start/status/stop/restart, DB bootstrap, PID validation, single-instance
-   protection and bounded stdout logging before operational acceptance.
+3. **AVAILABLE — project-local controller.** `deploy/linux/eidpctl.sh` provides
+   start/status/health/stop/restart, DB bootstrap, PID validation,
+   single-instance protection and bounded stdout logging. Venus runtime evidence
+   is still required before operational acceptance.
 4. **ICT — approved ingress.** ICT must provide the exact internal URL, TLS,
    allowlist/authentication, WebSocket-capable reverse proxy and health-probe
    policy described in `deploy/linux/reverse-proxy-requirements.md`.
@@ -81,12 +82,11 @@ files and the runtime home below the project root. The v1 main lane installs the
 
 - `deploy/linux/project_env.sh` is a Bash library used by Bash wrappers. An
   operator must not source it from an arbitrary interactive shell.
-- `.env` is read by Python settings. It does **not** currently populate shell
-  variables used by `run_web.sh`.
-- **PENDING:** the project-local controller must parse only
+- `.env` is read as data by Python; operators do not source it as shell code.
+- **AVAILABLE:** the project-local controller parses only
   `EIDP_WEB_PORT`, `EIDP_WEB_BASE_URL_PATH`, `EIDP_INTERNAL_BASE_URL` and
-  `EIDP_WEB_MAX_UPLOAD_MB` from `.env`, validate them and pass them to the
-  launcher. It must not execute `.env` as shell code.
+  `EIDP_WEB_MAX_UPLOAD_MB` from `.env`, validates them and passes them to the
+  launcher. It does not execute `.env` as shell code.
 - Port defaults to 8502. `--server.address 127.0.0.1` remains hard-coded and is
   not configurable in v1. `EIDP_WEB_BIND` must not be presented as effective.
 - Root hosting is preferred. If ICT requires `/eidp/`, the controller must set
@@ -95,11 +95,16 @@ files and the runtime home below the project root. The v1 main lane installs the
 
 ### 1.5 Database and application startup
 
-**PENDING:** implement `deploy/linux/eidpctl.sh` before using this runbook for
-acceptance. Its public operations are:
+**AVAILABLE:** `deploy/linux/eidpctl.sh` is the runtime lifecycle entrypoint.
+Its public operations are:
 
 ```text
 deploy/linux/eidpctl.sh db-bootstrap
+deploy/linux/eidpctl.sh import-excel <path>
+deploy/linux/eidpctl.sh manifest --actor <operator>
+deploy/linux/eidpctl.sh backup-package --backup-id <backup-id> --actor <operator>
+deploy/linux/eidpctl.sh backup-verify backups/<backup-id>
+deploy/linux/eidpctl.sh restore-drill backups/<backup-id> --target restore-drills/verified/<backup-id>
 deploy/linux/eidpctl.sh start
 deploy/linux/eidpctl.sh status
 deploy/linux/eidpctl.sh stop
@@ -115,8 +120,8 @@ It must also:
 - reject a second instance;
 - detect and remove only a verified stale PID file;
 - verify that a live PID belongs to this checkout before stop/restart;
-- keep `run/eidp.pid` below the root and rotate `logs/web.log` at 10 MiB with
-  no more than five retained files (50 MiB total);
+- keep `run/eidp.pid.json` below the root and rotate `logs/web.log` at 10 MiB
+  with no more than five retained backups plus the active log;
 - preserve the 127.0.0.1 bind;
 - expose a loopback health check at `/_stcore/health`.
 
@@ -126,18 +131,24 @@ responsibility.
 
 ### 1.6 Deployment manifest
 
-**PENDING:** each installation or upgrade writes
-`run/deployment-manifest.json` containing at least:
+**AVAILABLE — repository/local evidence only:** `eidpctl.sh manifest` validates
+the protected checkout and atomically writes `run/deployment-manifest.json`
+containing at least:
 
 - deployed commit and matching `origin/main` commit;
 - SHA-256 of `uv.lock`;
 - Alembic/schema head;
 - UTC deployment time and operator;
 - public internal URL, port and base path;
-- matching pre-upgrade backup manifest ID;
+- operator-supplied pre-upgrade backup ID when available; recording the ID
+  does not prove that it matches a finalized package;
 - off-host backup receipt ID when available.
 
 It must contain no secret values.
+
+The command and its local contracts are available. A manifest captured from an
+actual Venus installation remains **PENDING** and cannot be inferred from Mac
+test evidence.
 
 ## 2. Runtime And Failure Semantics
 
@@ -282,26 +293,37 @@ controller acquires the global write lock, rechecks every eligibility condition
 and blob digest against current DB state, and aborts on any change. Explicit
 operator confirmation is mandatory; there is no silent background delete.
 
-## 5. Backup, Restore And Rollback (**PENDING**)
+## 5. Backup, Restore And Rollback (**PARTLY AVAILABLE — LOCAL EVIDENCE ONLY**)
 
-1. Reuse the existing WAL checkpoint plus `VACUUM INTO` DB snapshot and wrap it
-   in a checksummed package under `backups/` containing audit/outbox data, source
-   PDFs, export artifacts and a manifest. The package/orchestration does not yet
-   exist. It must hold the global write lock while capturing the DB and file
-   inventory, write to staging, verify all checksums, then atomically publish a
-   finalized package. ICT pulls only packages carrying the finalized marker.
-2. ICT pulls the verified package to an approved **off-host** destination. An
-   outside-root copy on the same Venus disk is only intermediate protection and
-   is not disaster recovery.
-3. Restore drills unpack into an isolated disposable directory, verify hashes,
-   run SQLite `integrity_check`, start the target code against the restored copy
-   and compare expected evidence before any controlled cutover.
-4. Upgrade rollback always pairs the target code SHA with its matching
-   pre-upgrade DB backup and recorded schema head. Code-only rollback across a
-   migration is forbidden.
+1. **AVAILABLE — local package construction:** `eidpctl.sh backup-package`
+   holds the global data lock, reuses the WAL checkpoint plus `VACUUM INTO`,
+   captures the exact allowlisted DB/audit/source-PDF/export/deployment
+   inventory, keeps `data/master.xlsx` owner-read-only, verifies all digests and
+   atomically publishes a finalized package under `backups/`. `backup-verify`
+   revalidates finalized evidence without modifying it. These controls have
+   automated local evidence; they have not yet run on Venus.
+2. **ICT/PENDING — off-host disaster recovery:** ICT must pull a verified
+   finalized package to an approved different host/storage failure domain and
+   return a receipt bound to the package-manifest digest. An outside-root copy
+   on the same Venus disk is only intermediate protection and is not disaster
+   recovery.
+3. **AVAILABLE — isolated local restore drill:** `eidpctl.sh restore-drill`
+   rematerializes a finalized package only below `restore-drills/verified/`,
+   rechecks descriptor-bound package evidence and SQLite integrity/schema,
+   runs and stops a temporary loopback Streamlit process against restored data,
+   optionally checks export/action/audit evidence, and writes a secret-free
+   restore report. Idempotent retries never overwrite or repair an existing
+   conflicting target.
+4. **PENDING/PARTIAL — code/backup pairing:** tested primitives can record the
+   protected code SHA, `uv.lock`, schema head and an optional pre-upgrade backup
+   ID. The controller does not yet create or verify a matched code/package pair
+   as one upgrade transaction, so this is not rollback evidence. Code-only
+   rollback across a migration remains forbidden.
 
-A technical trial may prove local restore. Internally acceptable v1 requires at
-least one successful off-host restore proof.
+**PENDING — Venus/off-host proof:** no repository test proves Venus storage,
+off-host transfer, receipt custody or recovery after loss of the project root.
+Internally acceptable v1 still requires at least one successful off-host restore proof
+plus the Venus acceptance evidence in Section 6.
 
 ## 6. Acceptance Evidence
 

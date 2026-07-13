@@ -1,0 +1,348 @@
+"""Project-local command boundary for the EIDP Linux Web runtime."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import secrets
+import stat
+import subprocess
+import sys
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
+from pathlib import Path
+from typing import NoReturn
+
+from eidp.ops.deployment_manifest import (
+    DeploymentManifestError,
+    collect_deployment_manifest,
+    deployment_manifest_payload,
+    write_deployment_manifest_atomic,
+)
+from eidp.ops.runtime_config import load_runtime_config
+from eidp.ops.runtime_process import (
+    ControllerError,
+    ProcessIdentityError,
+    _controller_lock,
+    _health,
+    _open_relative_directory,
+    _start,
+    _status,
+    _stop,
+)
+from eidp.ops.runtime_process import (
+    ProcessIdentity as ProcessIdentity,
+)
+from eidp.ops.runtime_process import (
+    read_verified_process as read_verified_process,
+)
+
+_DIRECTORY_FLAGS = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0)
+_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
+_BACKUP_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,127}")
+_RESERVED_BACKUP_IDS = {".staging", "pre-upgrade"}
+
+
+def _validate_backup_id_leaf(value: str, *, label: str) -> str:
+    if _BACKUP_ID_PATTERN.fullmatch(value) is None or value in _RESERVED_BACKUP_IDS:
+        raise ControllerError(f"{label} {value!r} must be a valid non-reserved finalized backup ID")
+    return value
+
+
+def _project_relative_path(raw_path: Path, *, app_root: Path, label: str) -> Path:
+    candidate = raw_path if raw_path.is_absolute() else app_root / raw_path
+    try:
+        return Path(os.path.abspath(candidate)).relative_to(app_root)
+    except ValueError as exc:
+        raise ControllerError(f"{label} path must remain inside the project root") from exc
+
+
+def _open_project_regular_file(raw_path: Path, *, app_root: Path) -> int:
+    relative = _project_relative_path(raw_path, app_root=app_root, label="import-excel")
+    if not relative.parts:
+        raise ControllerError("import-excel path must be a regular file inside the project root")
+    parent = Path(*relative.parts[:-1])
+    if parent.parts:
+        directory_fd = _open_relative_directory(app_root, parent, create=False)
+    else:
+        try:
+            directory_fd = os.open(app_root, _DIRECTORY_FLAGS | _NOFOLLOW)
+        except OSError as exc:
+            raise ControllerError(f"unsafe project root: {exc}") from exc
+    try:
+        descriptor = os.open(
+            relative.name,
+            os.O_RDONLY | _NOFOLLOW | getattr(os, "O_CLOEXEC", 0),
+            dir_fd=directory_fd,
+        )
+    except OSError as exc:
+        raise ControllerError(
+            f"import-excel path is missing, outside the project root, or a symlink: {exc}"
+        ) from exc
+    finally:
+        os.close(directory_fd)
+    if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        os.close(descriptor)
+        raise ControllerError("import-excel path must be a regular file inside the project root")
+    return descriptor
+
+
+@contextmanager
+def _staged_import_source(source_fd: int, *, app_root: Path) -> Iterator[Path]:
+    directory = Path("run/import-staging")
+    directory_fd = _open_relative_directory(app_root, directory, create=True)
+    name = f"import-{secrets.token_hex(12)}.xlsx"
+    destination_fd = -1
+    try:
+        destination_fd = os.open(
+            name,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | _NOFOLLOW | getattr(os, "O_CLOEXEC", 0),
+            0o600,
+            dir_fd=directory_fd,
+        )
+        os.lseek(source_fd, 0, os.SEEK_SET)
+        while chunk := os.read(source_fd, 1024 * 1024):
+            written = 0
+            while written < len(chunk):
+                written += os.write(destination_fd, chunk[written:])
+        os.fsync(destination_fd)
+        os.close(destination_fd)
+        destination_fd = -1
+        yield app_root / directory / name
+    finally:
+        if destination_fd >= 0:
+            os.close(destination_fd)
+        try:
+            os.unlink(name, dir_fd=directory_fd)
+        except FileNotFoundError:
+            pass
+        os.close(directory_fd)
+
+
+def _delegate(app_root: Path, arguments: Sequence[str]) -> int:
+    result = subprocess.run(
+        ["uv", "run", "--frozen", "--no-sync", "eidp", *arguments],
+        cwd=app_root,
+        env=os.environ.copy(),
+        check=False,
+    )
+    return result.returncode
+
+
+def _import_excel(app_root: Path, raw_path: Path) -> int:
+    source_fd = _open_project_regular_file(raw_path, app_root=app_root)
+    try:
+        with _staged_import_source(source_fd, app_root=app_root) as staged:
+            return _delegate(app_root, ["import-excel", str(staged)])
+    finally:
+        os.close(source_fd)
+
+
+def _backup_verify(app_root: Path, raw_path: Path) -> int:
+    relative = _project_relative_path(raw_path, app_root=app_root, label="backup-verify")
+    if (
+        len(relative.parts) != 2
+        or relative.parts[0] != "backups"
+    ):
+        raise ControllerError("backup-verify path must use the finalized backups/{backup_id} layout, never staging")
+    _validate_backup_id_leaf(relative.name, label="backup-verify package name")
+    descriptor = _open_relative_directory(app_root, relative, create=False)
+    os.close(descriptor)
+    return _delegate(app_root, ["backup-verify", str(app_root / relative)])
+
+
+def _restore_path(raw_path: Path, *, app_root: Path, label: str) -> Path:
+    if ".." in raw_path.parts:
+        raise ControllerError(f"{label} path traversal is not allowed")
+    return _project_relative_path(raw_path, app_root=app_root, label=label)
+
+
+def _restore_drill(
+    app_root: Path,
+    *,
+    package_path: Path,
+    target_path: Path,
+    smoke_port: int,
+    expected_manifest_sha: str | None,
+    off_host_receipt_id: str | None,
+    acceptance_expectations: Path | None,
+) -> int:
+    package_relative = _restore_path(package_path, app_root=app_root, label="restore package")
+    package_parts = package_relative.parts
+    if not (
+        (len(package_parts) == 2 and package_parts[0] == "backups")
+        or (len(package_parts) == 3 and package_parts[:2] == ("restore-drills", "incoming"))
+    ):
+        raise ControllerError("restore package must use direct finalized backups/{id} or incoming/{id}")
+    backup_id = _validate_backup_id_leaf(package_relative.name, label="restore package name")
+    package_fd = _open_relative_directory(app_root, package_relative, create=False)
+    os.close(package_fd)
+
+    target_relative = _restore_path(target_path, app_root=app_root, label="restore target")
+    if (
+        len(target_relative.parts) != 3
+        or target_relative.parts[:2] != ("restore-drills", "verified")
+        or target_relative.name != backup_id
+    ):
+        raise ControllerError("restore target must use the exact verified/{backup_id} layout")
+    target_parent_fd = _open_relative_directory(app_root, Path("restore-drills/verified"), create=False)
+    os.close(target_parent_fd)
+    if os.path.lexists(app_root / target_relative):
+        target_fd = _open_relative_directory(app_root, target_relative, create=False)
+        os.close(target_fd)
+
+    expectation_path: Path | None = None
+    if acceptance_expectations is not None:
+        expectation_relative = _restore_path(
+            acceptance_expectations,
+            app_root=app_root,
+            label="restore acceptance expectation",
+        )
+        if (
+            len(expectation_relative.parts) != 4
+            or expectation_relative.parts[:3] != ("evidence", "runtime", "exports")
+            or expectation_relative.suffix != ".json"
+        ):
+            raise ControllerError("restore expectation must be a direct evidence/runtime/exports/{id}.json file")
+        expectation_fd = _open_project_regular_file(app_root / expectation_relative, app_root=app_root)
+        os.close(expectation_fd)
+        expectation_path = app_root / expectation_relative
+
+    delegated = [
+        "restore-drill",
+        str(app_root / package_relative),
+        "--target",
+        str(app_root / target_relative),
+        "--smoke-port",
+        str(smoke_port),
+    ]
+    if expected_manifest_sha is not None:
+        delegated.extend(("--expected-manifest-sha", expected_manifest_sha))
+    if off_host_receipt_id is not None:
+        delegated.extend(("--off-host-receipt-id", off_host_receipt_id))
+    if expectation_path is not None:
+        delegated.extend(("--acceptance-expectations", str(expectation_path)))
+    return _delegate(app_root, delegated)
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="eidpctl", description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("db-bootstrap")
+    commands.add_parser("import-excel").add_argument("path", type=Path)
+    backup_package = commands.add_parser("backup-package")
+    backup_package.add_argument("--backup-id", required=True)
+    backup_package.add_argument("--actor", required=True)
+    commands.add_parser("backup-verify").add_argument("path", type=Path)
+    restore_drill = commands.add_parser("restore-drill")
+    restore_drill.add_argument("package_path", type=Path)
+    restore_drill.add_argument("--target", type=Path, required=True, dest="target_path")
+    restore_drill.add_argument("--smoke-port", type=int, default=18502)
+    restore_drill.add_argument("--expected-manifest-sha")
+    restore_drill.add_argument("--off-host-receipt-id")
+    restore_drill.add_argument("--acceptance-expectations", type=Path)
+    commands.add_parser("start").add_argument("--health-timeout", type=float, default=30.0)
+    commands.add_parser("status").add_argument("--json", action="store_true", dest="as_json")
+    commands.add_parser("stop").add_argument("--timeout", type=float, default=10.0)
+    restart = commands.add_parser("restart")
+    restart.add_argument("--health-timeout", type=float, default=30.0)
+    restart.add_argument("--timeout", type=float, default=10.0)
+    commands.add_parser("health").add_argument("--timeout", type=float, default=2.0)
+    manifest = commands.add_parser("manifest")
+    manifest.add_argument("--actor", required=True)
+    manifest.add_argument("--expected-deployment-commit")
+    manifest.add_argument("--pre-upgrade-backup-id")
+    manifest.add_argument("--off-host-receipt-id")
+    return parser
+
+
+def _app_root() -> Path:
+    configured = os.environ.get("EIDP_APP_ROOT")
+    if not configured:
+        raise ControllerError("EIDP_APP_ROOT is required")
+    try:
+        return Path(configured).resolve(strict=True)
+    except OSError as exc:
+        raise ControllerError(f"EIDP_APP_ROOT is invalid: {exc}") from exc
+
+
+def _fail(message: str) -> NoReturn:
+    print(f"ERROR: {message}", file=sys.stderr)
+    raise SystemExit(2)
+
+
+def main(arguments: Sequence[str] | None = None) -> int:
+    """Run one serialized controller command."""
+
+    parsed = _parser().parse_args(arguments)
+    try:
+        app_root = _app_root()
+        with _controller_lock(app_root):
+            if parsed.command == "db-bootstrap":
+                return _delegate(app_root, ["db-bootstrap", "--sqlite"])
+            if parsed.command == "import-excel":
+                return _import_excel(app_root, parsed.path)
+            if parsed.command == "backup-package":
+                return _delegate(
+                    app_root,
+                    ["backup-package", "--backup-id", parsed.backup_id, "--actor", parsed.actor],
+                )
+            if parsed.command == "backup-verify":
+                return _backup_verify(app_root, parsed.path)
+            if parsed.command == "restore-drill":
+                return _restore_drill(
+                    app_root,
+                    package_path=parsed.package_path,
+                    target_path=parsed.target_path,
+                    smoke_port=parsed.smoke_port,
+                    expected_manifest_sha=parsed.expected_manifest_sha,
+                    off_host_receipt_id=parsed.off_host_receipt_id,
+                    acceptance_expectations=parsed.acceptance_expectations,
+                )
+            if parsed.command == "start":
+                _start(app_root, load_runtime_config(app_root / ".env"), health_timeout=parsed.health_timeout)
+                return 0
+            if parsed.command == "status":
+                return _status(app_root, as_json=parsed.as_json)
+            if parsed.command == "stop":
+                _stop(app_root, timeout=parsed.timeout)
+                return 0
+            if parsed.command == "restart":
+                if parsed.health_timeout <= 0 or parsed.timeout <= 0:
+                    raise ControllerError("restart timeouts must be positive")
+                config = load_runtime_config(app_root / ".env")
+                _stop(app_root, timeout=parsed.timeout, quiet=True)
+                _start(app_root, config, health_timeout=parsed.health_timeout)
+                return 0
+            if parsed.command == "health":
+                _health(app_root, timeout=parsed.timeout)
+                return 0
+            if parsed.command == "manifest":
+                runtime = load_runtime_config(app_root / ".env")
+                deployment = collect_deployment_manifest(
+                    app_root=app_root,
+                    runtime=runtime,
+                    actor=parsed.actor,
+                    expected_deployment_commit=parsed.expected_deployment_commit,
+                    pre_upgrade_backup_id=parsed.pre_upgrade_backup_id,
+                    off_host_receipt_id=parsed.off_host_receipt_id,
+                )
+                write_deployment_manifest_atomic(app_root / "run" / "deployment-manifest.json", deployment)
+                print(json.dumps(deployment_manifest_payload(deployment), ensure_ascii=False, sort_keys=True))
+                return 0
+            raise ControllerError(f"unsupported command: {parsed.command}")
+    except (
+        ControllerError,
+        DeploymentManifestError,
+        ProcessIdentityError,
+        ValueError,
+        OSError,
+        subprocess.SubprocessError,
+    ) as exc:
+        _fail(str(exc))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

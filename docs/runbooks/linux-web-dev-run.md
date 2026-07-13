@@ -20,20 +20,25 @@ This web entry point supports only browser-based PDF intake:
 It does not implement automatic PDF discovery, automatic target-year judgment, Copilot/NotebookLM upload,
 extraction review, double-check import, final Excel write, user auth/roles, or Linux production deployment.
 
-## Local Start
+## Local Runtime Lifecycle
 
 From the repository root:
 
 ```bash
 uv sync --extra pdf --extra dev
-deploy/linux/run_web.sh
+# Set the allowlisted port in the project-root .env, for example:
+# EIDP_WEB_PORT=8510
+deploy/linux/eidpctl.sh start
+deploy/linux/eidpctl.sh status
+deploy/linux/eidpctl.sh health
+deploy/linux/eidpctl.sh stop
+deploy/linux/eidpctl.sh restart
 ```
 
-The script binds Streamlit to `127.0.0.1` and uses port `8502` by default. Override the port with:
-
-```bash
-EIDP_WEB_PORT=8510 deploy/linux/run_web.sh
-```
+The controller validates `EIDP_WEB_PORT` from `.env`, defaults it to `8502`,
+and keeps Streamlit bound to `127.0.0.1`. Operators use only the five
+`eidpctl.sh` lifecycle commands above. `deploy/linux/run_web.sh` is reserved for
+the internal CI smoke and is not an operator entrypoint.
 
 For a remote research-lab Linux server, expose the UI through an SSH tunnel or an approved reverse proxy.
 Do not bind this MVP directly to `0.0.0.0`; this slice does not include authentication or role controls.

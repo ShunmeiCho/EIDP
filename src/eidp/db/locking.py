@@ -39,6 +39,8 @@ import contextlib
 import fcntl
 import json
 import os
+import stat
+import threading
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -63,6 +65,20 @@ class LockStatus:
     owner: str | None = None
     pid: int | None = None
     started_at: str | None = None  # ISO-8601 string for easy display
+
+
+@dataclass(frozen=True)
+class _HeldLock:
+    path: Path
+    pid: int
+    thread_id: int
+    fd: int
+    device: int
+    inode: int
+
+
+_held_locks: dict[tuple[Path, int], list[_HeldLock]] = {}
+_held_locks_guard = threading.RLock()
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +136,47 @@ def _read_owner_metadata(path: Path) -> dict[str, Any] | None:
         return None
 
 
+def _canonical_lock_path(lock_path: Path) -> Path:
+    absolute = Path(os.path.abspath(lock_path))
+    return absolute.parent.resolve(strict=True) / absolute.name
+
+
+def _register_held_lock(path: Path, fd: int) -> _HeldLock:
+    descriptor_stat = os.fstat(fd)
+    path_stat = os.stat(path, follow_symlinks=False)
+    if (
+        not stat.S_ISREG(path_stat.st_mode)
+        or (descriptor_stat.st_dev, descriptor_stat.st_ino) != (path_stat.st_dev, path_stat.st_ino)
+    ):
+        raise RuntimeError(f"lock path identity changed before proof registration: {path}")
+    proof = _HeldLock(
+        path=path,
+        pid=os.getpid(),
+        thread_id=threading.get_ident(),
+        fd=fd,
+        device=descriptor_stat.st_dev,
+        inode=descriptor_stat.st_ino,
+    )
+    key = (path, proof.thread_id)
+    with _held_locks_guard:
+        _held_locks.setdefault(key, []).append(proof)
+    return proof
+
+
+def _unregister_held_lock(proof: _HeldLock) -> None:
+    key = (proof.path, proof.thread_id)
+    with _held_locks_guard:
+        registered = _held_locks.get(key)
+        if registered is None:
+            return
+        try:
+            registered.remove(proof)
+        except ValueError:
+            return
+        if not registered:
+            del _held_locks[key]
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -156,13 +213,21 @@ def acquire_lock(
         the lock.
     """
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    meta_path = lock_path.with_suffix(lock_path.suffix + ".meta")
+    canonical_path = _canonical_lock_path(lock_path)
+    meta_path = canonical_path.with_suffix(canonical_path.suffix + ".meta")
 
-    fd = os.open(str(lock_path), os.O_RDWR | os.O_CREAT, 0o600)
+    fd = os.open(
+        canonical_path,
+        os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+        0o600,
+    )
+    acquired = False
+    proof: _HeldLock | None = None
     try:
         if blocking:
             if timeout is None:
                 _block_lock(fd)
+                acquired = True
             else:
                 # Implement timed blocking via a polling loop so we don't
                 # rely on platform-specific timed-lock semantics.
@@ -170,6 +235,7 @@ def acquire_lock(
                 deadline = time.monotonic() + timeout
                 while True:
                     if _try_lock(fd):
+                        acquired = True
                         break
                     if time.monotonic() >= deadline:
                         raise LockBusyError(
@@ -180,10 +246,12 @@ def acquire_lock(
             if not _try_lock(fd):
                 meta = _read_owner_metadata(meta_path) or {}
                 raise LockBusyError(
-                    f"{lock_path} held by {meta.get('owner', 'unknown')} "
+                    f"{canonical_path} held by {meta.get('owner', 'unknown')} "
                     f"pid={meta.get('pid')} since {meta.get('started_at')}"
                 )
+            acquired = True
 
+        proof = _register_held_lock(canonical_path, fd)
         _write_owner_metadata(meta_path, owner)
         try:
             yield
@@ -200,8 +268,43 @@ def acquire_lock(
                     error_type=type(exc).__name__,
                 )
     finally:
-        _unlock(fd)
+        if proof is not None:
+            _unregister_held_lock(proof)
+        if acquired:
+            _unlock(fd)
         os.close(fd)
+
+
+def require_lock_held(lock_path: Path) -> None:
+    """Require a live lock proof owned by this process and current thread."""
+
+    try:
+        canonical_path = _canonical_lock_path(lock_path)
+    except OSError as exc:
+        raise RuntimeError(f"lock is not held; path is unavailable: {lock_path}") from exc
+    thread_id = threading.get_ident()
+    with _held_locks_guard:
+        registered = tuple(_held_locks.get((canonical_path, thread_id), ()))
+    if not registered:
+        raise RuntimeError(f"lock is not held by the current thread: {canonical_path}")
+
+    proof = registered[-1]
+    if proof.pid != os.getpid() or proof.thread_id != thread_id:
+        raise RuntimeError(f"lock proof process or thread identity mismatch: {canonical_path}")
+    try:
+        descriptor_stat = os.fstat(proof.fd)
+    except OSError as exc:
+        raise RuntimeError(f"lock proof descriptor is no longer live: {canonical_path}") from exc
+    try:
+        path_stat = os.stat(canonical_path, follow_symlinks=False)
+    except OSError as exc:
+        raise RuntimeError(f"lock path is unavailable for identity proof: {canonical_path}") from exc
+    if (
+        not stat.S_ISREG(path_stat.st_mode)
+        or (descriptor_stat.st_dev, descriptor_stat.st_ino) != (proof.device, proof.inode)
+        or (path_stat.st_dev, path_stat.st_ino) != (proof.device, proof.inode)
+    ):
+        raise RuntimeError(f"lock path or descriptor identity mismatch: {canonical_path}")
 
 
 def probe_lock(lock_path: Path) -> LockStatus:

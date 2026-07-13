@@ -79,8 +79,9 @@ other local Venus accounts, so it is not an identity boundary by itself.
 The preferred ingress is a dedicated internal hostname serving `/`. If ICT can
 only provide `/eidp/`, the proxy prefix and Streamlit `server.baseUrlPath` must
 match, `/eidp` redirects to `/eidp/`, and `_stcore`/static paths retain the
-prefix. Launcher support for `baseUrlPath`, the public browser address and
-explicit CORS origins is pending and release blocking. The proxy must support
+prefix. Runtime support for `baseUrlPath`, the public browser address and
+explicit CORS origins is **AVAILABLE**. ICT proxy configuration and deployment
+evidence remain **PENDING** and release blocking. The proxy must support
 WebSocket upgrade, preserve the public
 host/port/scheme, keep XSRF/CORS enabled, use a body limit above the application
 file limit and apply an explicit health-probe policy.
@@ -248,6 +249,14 @@ redirected below the root.
 Preflight records CPU, memory, disk, permissions, port use, tool availability,
 `uv.lock` and soft/hard file-descriptor limits. It does not change host limits.
 
+The deployment Unix UID and its processes are the v1 runtime trust boundary.
+That UID must not be shared with untrusted workloads. This process boundary
+does not make every Venus local account trusted; the broader local-account
+assumption for `configured_fallback` remains separately governed by section
+4.1. If the deployment UID cannot be isolated, deployment is not accepted and
+a dedicated service account plus cgroup, fd-aware import or equivalent controls
+require a separate approved design.
+
 ### 6.3 Configuration and controller
 
 `project_env.sh` is sourced only from Bash wrappers. Interactive-shell sourcing
@@ -266,6 +275,12 @@ against this checkout, rotates `logs/web.log` at 10 MiB with at most five
 retained files, and never kills an unrelated process. An application stop/start
 satisfies the restart gate. Machine-reboot autostart is an external ICT
 responsibility.
+
+`deploy/linux/eidpctl.sh` is the only operator lifecycle entrypoint. Operators
+set the allowlisted `EIDP_WEB_PORT` in the project-root `.env`; they do not pass
+it directly to the launcher. `deploy/linux/run_web.sh` requires the controller
+to supply validated `STREAMLIT_SERVER_PORT` and is reserved for the internal CI
+smoke when CI supplies that variable explicitly.
 
 ### 6.4 Deployment manifest
 

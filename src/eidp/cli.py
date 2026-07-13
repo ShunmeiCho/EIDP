@@ -475,6 +475,130 @@ def db_backup(
         typer.echo(f"SQLite backup written: {written}")
 
 
+@app.command("backup-package")
+def backup_package(
+    backup_id: str = typer.Option(..., "--backup-id", help="Stable finalized backup package ID."),
+    actor: str = typer.Option(..., "--actor", help="Operator identity recorded in backup evidence."),
+) -> None:
+    """Build and finalize an allowlisted recovery package under backups/."""
+    with _require_app_lock("cli_backup_package"):
+        from eidp.config import settings
+        from eidp.db.sqlite_backup import sqlite_path_from_database_url
+        from eidp.ops.backup_package import BackupPackageError, build_backup_package
+
+        try:
+            result = build_backup_package(
+                app_root=Path(settings.app_root),
+                database_path=sqlite_path_from_database_url(settings.database_url),
+                backup_id=backup_id,
+                deployment_manifest=Path(settings.app_root) / "run/deployment-manifest.json",
+                actor=actor,
+            )
+        except (BackupPackageError, ValueError) as exc:
+            typer.echo(f"ERROR: backup package failed: {exc}", err=True)
+            raise typer.Exit(2) from exc
+
+    typer.echo(
+        json.dumps(
+            {
+                "backup_id": result.backup_id,
+                "finalized_path": str(result.finalized_path),
+                "manifest_sha256": result.manifest_sha256,
+            },
+            sort_keys=True,
+        )
+    )
+
+
+@app.command("backup-verify")
+def backup_verify(path: Path = typer.Argument(..., help="Finalized package directory to verify.")) -> None:
+    """Read-only verification of a finalized recovery package."""
+    from eidp.ops.backup_package import BackupPackageError, verify_backup_package
+
+    try:
+        result = verify_backup_package(path)
+    except BackupPackageError as exc:
+        typer.echo(f"ERROR: backup verification failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(
+        json.dumps(
+            {
+                "backup_id": result.backup_id,
+                "finalized_path": str(result.finalized_path),
+                "manifest_sha256": result.manifest_sha256,
+            },
+            sort_keys=True,
+        )
+    )
+
+
+@app.command("restore-drill")
+def restore_drill(
+    package_path: Path = typer.Argument(..., help="Finalized backup package directory."),
+    target_path: Path = typer.Option(..., "--target", help="Exact isolated verified restore target."),
+    smoke_port: int = typer.Option(18502, "--smoke-port", help="Temporary loopback Streamlit smoke port."),
+    expected_manifest_sha: str | None = typer.Option(
+        None,
+        "--expected-manifest-sha",
+        help="Expected finalized backup-manifest SHA-256.",
+    ),
+    off_host_receipt_id: str | None = typer.Option(
+        None,
+        "--off-host-receipt-id",
+        help="Opaque operator-attested off-host receipt ID.",
+    ),
+    acceptance_expectations: Path | None = typer.Option(
+        None,
+        "--acceptance-expectations",
+        help="Project-local restore acceptance expectation JSON.",
+    ),
+) -> None:
+    """Verify and publish an isolated restore without opening live application state."""
+    from eidp.config import settings
+    from eidp.ops.backup_package import BackupPackageError
+    from eidp.ops.restore_drill import (
+        RestoreDrillError,
+        load_restore_evidence_expectation,
+        run_restore_drill,
+    )
+
+    app_root = Path(settings.app_root)
+    try:
+        expectation = (
+            load_restore_evidence_expectation(app_root=app_root, path=acceptance_expectations)
+            if acceptance_expectations is not None
+            else None
+        )
+        result = run_restore_drill(
+            app_root=app_root,
+            package_path=package_path,
+            target_path=target_path,
+            smoke_port=smoke_port,
+            expected_package_manifest_sha256=expected_manifest_sha,
+            off_host_receipt_id=off_host_receipt_id,
+            expected_evidence=expectation,
+        )
+    except (BackupPackageError, RestoreDrillError, ValueError) as exc:
+        typer.echo(f"ERROR: restore drill failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(
+        json.dumps(
+            {
+                "backup_id": result.backup_id,
+                "restored_path": str(result.restored_path),
+                "deployment_commit": result.deployment_commit,
+                "schema_head": result.schema_head,
+                "sqlite_integrity": result.sqlite_integrity,
+                "health_ok": result.health_ok,
+                "package_manifest_sha256": result.package_manifest_sha256,
+                "off_host_receipt_id": result.off_host_receipt_id,
+                "report_path": str(result.report_path),
+            },
+            sort_keys=True,
+        )
+    )
+
+
 @app.command()
 def rebuild_school_year_tasks(
     fiscal_year: int | None = typer.Option(

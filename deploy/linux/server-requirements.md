@@ -17,13 +17,14 @@ cd /home/junming/EIDP
 deploy/linux/sync_venv.sh
 ```
 
-The sync wrapper and runtime launcher both source `deploy/linux/project_env.sh`,
-so dependency builds, extraction, and serving share the same filesystem
-boundary. This creates/updates `/home/junming/EIDP/.venv`. Runtime startup uses
-`uv run --frozen --no-sync`, so serving the app neither resolves dependencies
-nor changes the host environment. The launcher also redirects `HOME`, `TMPDIR`,
-XDG/uv caches, browser binaries, SQLite, and application data below the project
-root so libraries cannot silently create runtime state elsewhere.
+The sync wrapper and project-local controller both use
+`deploy/linux/project_env.sh`, so dependency builds, extraction, and serving
+share the same filesystem boundary. This creates/updates
+`/home/junming/EIDP/.venv`. Runtime startup uses `uv run --frozen --no-sync`, so
+serving the app neither resolves dependencies nor changes the host environment.
+The boundary also redirects `HOME`, `TMPDIR`, XDG/uv caches, browser binaries,
+SQLite, and application data below the project root so libraries cannot
+silently create runtime state elsewhere.
 
 Required server capabilities:
 
@@ -47,10 +48,25 @@ business PC on the internal network
 Streamlit does not bind `0.0.0.0`. Before release, verify the actual business PC
 can upload, review, and download through the approved internal endpoint.
 
+Set the allowlisted `EIDP_WEB_PORT` in the private project-root `.env`. Runtime
+operators use only:
+
+```bash
+deploy/linux/eidpctl.sh start
+deploy/linux/eidpctl.sh status
+deploy/linux/eidpctl.sh health
+deploy/linux/eidpctl.sh stop
+deploy/linux/eidpctl.sh restart
+```
+
+`deploy/linux/run_web.sh` is reserved for the internal CI smoke and is not an
+operator entrypoint.
+
 ## Minimum deployment proof
 
 - `uv sync --frozen` succeeds inside the project root;
-- `deploy/linux/run_web.sh` starts and its health endpoint responds locally;
+- `deploy/linux/eidpctl.sh start`, `status`, and `health` prove the loopback
+  runtime, and `stop`/`restart` prove controlled lifecycle recovery;
 - stop/start/restart does not corrupt SQLite or leave a stale writer lock;
 - a business-PC LAN smoke completes;
 - SQLite, audit, upload, and export backup/restore succeeds;

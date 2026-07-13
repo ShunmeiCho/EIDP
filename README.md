@@ -49,9 +49,18 @@ Typical flow:
 3. On Venus, update `/home/junming/EIDP` and run `uv sync --frozen` to create or
    update `/home/junming/EIDP/.venv`.
 4. Copy `deploy/linux/env.example` to a private `.env` under the project root.
-5. Start with `deploy/linux/run_web.sh` and verify the loopback health endpoint.
+5. Set the allowlisted `EIDP_WEB_PORT` in `.env`, then use the project-local
+   lifecycle commands:
+   - `deploy/linux/eidpctl.sh start`
+   - `deploy/linux/eidpctl.sh status`
+   - `deploy/linux/eidpctl.sh health`
+   - `deploy/linux/eidpctl.sh stop`
+   - `deploy/linux/eidpctl.sh restart`
 6. Validate access from an authorized business PC through the internal network
    endpoint/reverse proxy.
+
+`deploy/linux/run_web.sh` is reserved for the internal CI smoke and is not an
+operator entrypoint.
 
 See [Linux development runbook](docs/runbooks/linux-web-dev-run.md),
 [server requirements](deploy/linux/server-requirements.md), and

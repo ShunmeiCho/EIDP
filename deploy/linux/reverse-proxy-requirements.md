@@ -58,9 +58,11 @@ rewrites. If ICT requires a sub-path:
 The chosen path is immutable for a deployment and is recorded in
 `run/deployment-manifest.json`.
 
-Application support for `baseUrlPath`, the public browser address and explicit
-CORS origins is **PENDING and release blocking**; the current `run_web.sh` does
-not pass those settings.
+Application support for the base path, public browser address and explicit CORS origins is **AVAILABLE**;
+the runtime controller passes the validated settings to `run_web.sh`. ICT must
+still configure and prove the chosen public URL, prefix, WebSocket path and
+origin behavior, so that external acceptance evidence remains **PENDING and
+release blocking**.
 
 ### 3. XSRF, CORS and public origin
 

@@ -89,7 +89,7 @@ jobs:
 
       - name: Streamlit loopback health smoke
         run: |
-          deploy/linux/run_web.sh >"$RUNNER_TEMP/eidp-streamlit.log" 2>&1 &
+          STREAMLIT_SERVER_PORT=8502 deploy/linux/run_web.sh >"$RUNNER_TEMP/eidp-streamlit.log" 2>&1 &
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           for _attempt in {1..30}; do
