@@ -87,6 +87,12 @@ files and the runtime home below the project root. The v1 main lane installs the
   `EIDP_WEB_PORT`, `EIDP_WEB_BASE_URL_PATH`, `EIDP_INTERNAL_BASE_URL` and
   `EIDP_WEB_MAX_UPLOAD_MB` from `.env`, validates them and passes them to the
   launcher. It does not execute `.env` as shell code.
+- **AVAILABLE:** Pydantic Settings reads `EIDP_IDENTITY_MODE`,
+  `EIDP_FALLBACK_ACTOR` and `EIDP_PROXY_SHARED_SECRET` from the private `.env`;
+  `run_web.sh` validates identity configuration before starting Streamlit.
+  Trusted-proxy mode with an empty secret therefore fails before the server
+  process starts. A real secret must come from ICT secret management and must
+  never enter git, logs, evidence or the deployment manifest.
 - Port defaults to 8502. `--server.address 127.0.0.1` remains hard-coded and is
   not configurable in v1. `EIDP_WEB_BIND` must not be presented as effective.
 - Root hosting is preferred. If ICT requires `/eidp/`, the controller must set
@@ -160,22 +166,27 @@ business truth.
   single-writer boundary.
   A concurrent second write receives a busy banner and performs no partial
   write.
-- **PENDING:** a committed task or decision survives application
-  restart. Unsaved Streamlit
+- **AVAILABLE — repository/local evidence only:** committed review and
+  double-check decisions survive a fresh Streamlit `AppTest` session. Unsaved
   widget edits do not survive a process or browser failure and are not claimed
   as resumable.
-- **PENDING — core only:** the extraction core retains the source PDF, reason
-  and retriable state on failure, but this path is not yet wired into the served
-  Streamlit UI. The served workflow must not claim this behavior until that
-  integration is implemented and tested; failed extraction must never produce
-  Excel-ready data.
-- **PENDING:** except for the liveness endpoint, an invalid trusted-proxy
-  identity or secret rejects the entire application request and never
-  downgrades to a read-only view or fallback.
-- **PENDING:** failure to insert the authoritative audit row rolls back the business
-  transaction. A post-commit JSONL projection failure leaves the DB commit
-  authoritative, records the outbox error and withholds the affected row from a
-  finalized export until an idempotent flush succeeds.
+- **PENDING — Venus process evidence:** application `stop -> start` recovery has
+  not been demonstrated on Venus. A fresh `AppTest` session is not a substitute
+  for this acceptance gate.
+- **AVAILABLE — repository/local evidence only:** the served TEXT queue invokes
+  the extraction core through its Run/Retry controls. The successful reference
+  path is covered through the real page entrypoints; core contracts retain the
+  source PDF and retriable failure state and prevent failed work from becoming
+  Excel-ready. A real Venus failure/retry drill remains **PENDING**.
+- **AVAILABLE — repository/local evidence only:** trusted-proxy mode rejects an
+  invalid identity or secret without downgrading to fallback, and incomplete
+  trusted configuration fails closed. Real proxy-injected headers and shared-
+  secret behavior on Venus remain **PENDING**.
+- **AVAILABLE — repository/local evidence only:** failure to insert the
+  authoritative audit row rolls back the business transaction. A post-commit
+  JSONL projection failure leaves the DB commit authoritative, records the
+  outbox error and can be retried idempotently. Withholding an audit-pending row
+  from a finalized export remains **PENDING** with Phase 4 export finalization.
 - **PENDING:** backup failure blocks upgrades, source-PDF cleanup and v1 release.
 
 ## 3. Business Workflow And Partial Export
@@ -193,6 +204,17 @@ operator-confirmed PDF
   -> human resolution
   -> server-generated Excel bundle
 ```
+
+**AVAILABLE — repository/local evidence only:** the real Streamlit entrypoints
+now cover intake -> TEXT extraction -> accept/correct/exclude review -> read-only
+master diff -> persisted external comparison -> reasoned human resolution. The
+reference fixture produces exactly 28 extraction nodes, 84 metric rows and 3
+independent course nodes; committed decisions and their DB/JSONL audit evidence
+survive fresh `AppTest` sessions.
+
+**PENDING:** canonical DB-backed source registration/retention, image-lane
+acceptance evidence, row-scoped partial export, final Excel generation and
+download, Venus process evidence, the business-PC run and PI acceptance.
 
 TEXT PDFs use the main lane. Image/unknown PDFs remain visible in the manual
 exception lane and cannot silently enter output.
@@ -232,23 +254,30 @@ Interrupted staging/finalization is recovered idempotently by export ID.
 
 ## 4. Identity, Audit And Source Evidence
 
-These controls are approved but **PENDING implementation**:
+The following controls are **AVAILABLE — repository/local evidence only**:
 
-- add nullable `manual_action_log.identity_source`; do not rewrite historical
-  rows; read NULL as `legacy_unspecified`;
-- use the documented values `trusted_proxy`, `configured_fallback`, `system`
-  and `legacy_unspecified` through one typed audit writer;
-- keep `action_id` as the audit/outbox deduplication key;
-- commit business mutation and `manual_action_log` in one SQLite transaction;
-- require both trusted identity and proxy shared secret in trusted mode;
-- refuse startup when trusted mode is incomplete and, except for liveness,
-  reject the entire invalid request without logging secret material.
+- `manual_action_log.identity_source` is nullable; migration does not rewrite
+  historical rows, and reads treat NULL as `legacy_unspecified`;
+- one typed audit writer uses `trusted_proxy`, `configured_fallback`, `system`
+  and `legacy_unspecified`;
+- `action_id` remains the audit/outbox deduplication key;
+- business mutation and `manual_action_log` commit in one SQLite transaction;
+- trusted mode requires both trusted identity and proxy shared secret;
+- startup refuses incomplete trusted configuration and, except for liveness,
+  rejects the entire invalid request without logging secret material.
+
+The served review and double-check actions use these controls in one locked
+transaction and project committed audit rows to JSONL after commit. Repository
+tests cover rollback, idempotent retry and a fresh-session DB/JSONL identity
+match. Actual Venus proxy headers, secret injection and operational audit proof
+remain **PENDING**.
 
 Fallback explicitly trusts every Venus local account that can reach loopback not
 to bypass the proxy. This must be recorded as a PI-accepted limitation; otherwise
 fallback is disabled and trusted mode is mandatory.
 
-Web intake currently computes a full SHA-256 but its filename uses only a
+Canonical source evidence remains **PENDING**. Web intake currently computes a
+full SHA-256 but its filename uses only a
 12-character prefix plus the original filename, and it is not integrated with
 the DB-wide `Document.file_hash` unique contract. The target design therefore
 uses one authoritative full SHA-256 document registry:

@@ -36,7 +36,7 @@ class DoubleCheckAppFixture:
 
 def _render_double_check_for_test(intake_root, session_factory):  # noqa: ANN001, ANN201
     from eidp.identity import IdentitySource, ResolvedIdentity
-    from eidp.web.pages.double_check import render_double_check_page
+    from eidp.web.views.double_check import render_double_check_page
 
     render_double_check_page(
         identity=ResolvedIdentity("app-test-reviewer", IdentitySource.CONFIGURED_FALLBACK),
@@ -370,7 +370,7 @@ def test_audit_projection_runs_only_after_resolution_commit(
     double_check_app: DoubleCheckAppFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from eidp.web.pages import double_check as page
+    from eidp.web.views import double_check as page
 
     app = _run_app(double_check_app)
     _create_run(app)

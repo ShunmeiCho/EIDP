@@ -78,6 +78,7 @@ jobs:
           tests/unit/test_web_write_lock_contract.py
           tests/unit/test_app_root_paths.py
           tests/integration/test_linux_web_e2e_chain.py
+          tests/integration/test_served_linux_web_chain.py
           -q
 
       - name: Web entry-point import smoke
@@ -89,7 +90,7 @@ jobs:
 
       - name: Streamlit loopback health smoke
         run: |
-          STREAMLIT_SERVER_PORT=8502 deploy/linux/run_web.sh >"$RUNNER_TEMP/eidp-streamlit.log" 2>&1 &
+          EIDP_IDENTITY_MODE=configured_fallback EIDP_FALLBACK_ACTOR=ci-smoke STREAMLIT_SERVER_PORT=8502 deploy/linux/run_web.sh >"$RUNNER_TEMP/eidp-streamlit.log" 2>&1 &
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           for _attempt in {1..30}; do

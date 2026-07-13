@@ -1,4 +1,4 @@
-"""Served extraction queue page for the Linux/Web MVP."""
+"""Served extraction queue page body for the Linux/Web MVP."""
 
 from __future__ import annotations
 

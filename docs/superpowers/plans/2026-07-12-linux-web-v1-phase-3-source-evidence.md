@@ -225,8 +225,8 @@ git commit -m "feat: unify document intake and hash identity" -m "Goals: G2, G7,
 ### Task 3: Web, Extraction And Evidence Provenance
 
 **Files:**
-- Modify: `src/eidp/web/pages/pdf_intake.py`
-- Modify: `src/eidp/web/pages/extraction_queue.py`
+- Modify: `src/eidp/web/views/pdf_intake.py`
+- Modify: `src/eidp/web/views/extraction_queue.py`
 - Modify: `src/eidp/pipeline/pdf_intake.py`
 - Modify: `src/eidp/pipeline/extraction_queue.py`
 - Modify: `src/eidp/pipeline/extraction_review.py`
@@ -297,7 +297,7 @@ Wire cross-school resolution into the served queue with typed identity/session i
 
 ```bash
 uv run pytest tests/unit/test_pdf_intake.py tests/unit/test_extraction_queue.py tests/unit/test_extraction_review.py tests/unit/test_review_decision.py tests/unit/test_double_check_resolution.py tests/unit/test_web_pdf_intake_app.py tests/unit/test_web_extraction_queue_app.py -v
-git add src/eidp/web/pages/pdf_intake.py src/eidp/web/pages/extraction_queue.py src/eidp/pipeline src/eidp/pipeline/source_evidence.py tests/unit/test_pdf_intake.py tests/unit/test_extraction_queue.py tests/unit/test_extraction_review.py tests/unit/test_review_decision.py tests/unit/test_double_check_resolution.py tests/unit/test_web_pdf_intake_app.py tests/unit/test_web_extraction_queue_app.py
+git add src/eidp/web/views/pdf_intake.py src/eidp/web/views/extraction_queue.py src/eidp/pipeline src/eidp/pipeline/source_evidence.py tests/unit/test_pdf_intake.py tests/unit/test_extraction_queue.py tests/unit/test_extraction_review.py tests/unit/test_review_decision.py tests/unit/test_double_check_resolution.py tests/unit/test_web_pdf_intake_app.py tests/unit/test_web_extraction_queue_app.py
 git commit -m "feat: carry canonical source evidence through review" -m "Goals: G1, G2, G3, G6"
 ```
 

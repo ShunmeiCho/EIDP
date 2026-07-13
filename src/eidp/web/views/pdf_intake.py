@@ -1,4 +1,4 @@
-"""PDF intake page for the Linux/Web MVP."""
+"""PDF intake page body for the Linux/Web MVP."""
 
 from __future__ import annotations
 

@@ -13,7 +13,7 @@ import streamlit as st
 from eidp.config import settings
 from eidp.logging_config import configure_logging
 from eidp.web.bootstrap import bootstrap_web_request
-from eidp.web.pages.pdf_intake import render_pdf_intake_page
+from eidp.web.views.pdf_intake import render_pdf_intake_page
 
 
 def main() -> None:

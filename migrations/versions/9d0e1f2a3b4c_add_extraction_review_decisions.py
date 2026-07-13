@@ -15,6 +15,19 @@ down_revision = "8c9d0e1f2a3b"
 branch_labels = None
 depends_on = None
 
+_TABLE_NAME = "extraction_review_decision"
+
+
+def _sqlite_immutability_trigger_ddl(operation: str) -> str:
+    trigger_name = f"trg_{_TABLE_NAME}_immutable_{operation.lower()}"
+    return f"""
+        CREATE TRIGGER IF NOT EXISTS {trigger_name}
+        BEFORE {operation} ON {_TABLE_NAME}
+        BEGIN
+            SELECT RAISE(ABORT, '{_TABLE_NAME} is immutable');
+        END
+    """
+
 
 def upgrade() -> None:
     op.create_table(
@@ -66,9 +79,16 @@ def upgrade() -> None:
         ["review_id"],
         unique=False,
     )
+    if op.get_bind().dialect.name == "sqlite":
+        for operation in ("UPDATE", "DELETE"):
+            op.execute(sa.text(_sqlite_immutability_trigger_ddl(operation)))
 
 
 def downgrade() -> None:
+    if op.get_bind().dialect.name == "sqlite":
+        for operation in ("UPDATE", "DELETE"):
+            trigger_name = f"trg_{_TABLE_NAME}_immutable_{operation.lower()}"
+            op.execute(sa.text(f"DROP TRIGGER IF EXISTS {trigger_name}"))
     op.drop_index(
         "ix_extraction_review_decision_review_id",
         table_name="extraction_review_decision",

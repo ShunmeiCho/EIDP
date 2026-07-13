@@ -642,13 +642,14 @@ class DoubleCheckResolution(Base):
     )
 
 
-_TASK5_IMMUTABLE_MODELS = (
+_SQLITE_IMMUTABLE_MODELS = (
+    ExtractionReviewDecision,
     ExternalComparisonRun,
     ExternalComparisonResult,
     DoubleCheckResolution,
 )
 
-for _immutable_model in _TASK5_IMMUTABLE_MODELS:
+for _immutable_model in _SQLITE_IMMUTABLE_MODELS:
     for _operation in ("UPDATE", "DELETE"):
         _table_name = _immutable_model.__tablename__
         _trigger_name = f"trg_{_table_name}_immutable_{_operation.lower()}"

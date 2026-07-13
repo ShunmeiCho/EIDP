@@ -17,7 +17,7 @@ def test_operator_write_pages_disable_or_hide_actions_when_app_lock_is_held() ->
     assert 'disabled=selected_school_id is None or lock_held' in source
     assert 'disabled=lock_held' in source
     assert "if _operator_lock_held(lock_path):\n        return" in source
-    assert 'page_exports(session, lock_path=Path(settings.data_dir) / ".lock")' in app_source
+    assert "raise RuntimeError(LEGACY_REVIEW_APP_RETIRED_MESSAGE)" in app_source
 
 
 def test_quick_operator_pages_disable_primary_write_buttons_when_app_lock_is_held() -> None:

@@ -5,7 +5,6 @@ from pathlib import Path
 import pdfplumber
 import pytest
 from streamlit.testing.v1 import AppTest
-from structlog.testing import capture_logs
 
 from eidp.db.locking import acquire_lock
 from eidp.pipeline.extraction_queue import ExtractionStatus, load_extracted_rows, load_extraction_queue
@@ -15,9 +14,17 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 TEXT_PDF_BYTES = (REPO_ROOT / "data" / "sample-pdfs" / "tca.pdf").read_bytes()
 
 
+class _RecordingLog:
+    def __init__(self) -> None:
+        self.events: list[dict[str, object]] = []
+
+    def info(self, event: str, **kwargs: object) -> None:
+        self.events.append({"event": event, **kwargs})
+
+
 def _render_extraction_queue_for_test(intake_root):  # noqa: ANN001, ANN201
     from eidp.identity import IdentitySource, ResolvedIdentity
-    from eidp.web.pages.extraction_queue import render_extraction_queue_page
+    from eidp.web.views.extraction_queue import render_extraction_queue_page
 
     render_extraction_queue_page(
         identity=ResolvedIdentity("app-test-operator", IdentitySource.CONFIGURED_FALLBACK),
@@ -55,24 +62,30 @@ def _queue_item(intake_root: Path, intake_record_id: str):  # noqa: ANN202
     return next(item for item in load_extraction_queue(intake_root) if item.intake_record_id == intake_record_id)
 
 
-def test_text_queue_run_reaches_core_and_persists_evidence(tmp_path: Path) -> None:
+def test_text_queue_run_reaches_core_and_persists_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    from eidp.web.services import extraction as extraction_service
+
+    recording_log = _RecordingLog()
+    monkeypatch.setattr(extraction_service, "log", recording_log)
     record = _store_intake(tmp_path, pdf_kind=PdfKind.TEXT)
     app = _run_queue_app(tmp_path)
 
     assert _button(app, label="Run").key == f"run_extraction_{record.record_id}"
-    with capture_logs() as logs:
-        _button(app, label="Run").click()
-        app.run(timeout=30)
+    _button(app, label="Run").click()
+    app.run(timeout=30)
 
     assert not app.exception
     item = _queue_item(tmp_path, record.record_id)
     assert item.status == ExtractionStatus.EXTRACTION_COMPLETED
     assert load_extracted_rows(tmp_path, record.record_id)
-    requested = [event for event in logs if event.get("event") == "served_extraction_requested"]
+    requested = [event for event in recording_log.events if event.get("event") == "served_extraction_requested"]
     assert len(requested) == 1
     assert requested[0]["actor"] == "app-test-operator"
     assert requested[0]["identity_source"] == "configured_fallback"
-    assert set(requested[0]) <= {"event", "actor", "identity_source", "intake_record_id", "log_level"}
+    assert set(requested[0]) == {"event", "actor", "identity_source", "intake_record_id"}
     assert not (tmp_path / "audit" / "manual-actions.jsonl").exists()
 
 
@@ -128,13 +141,20 @@ def test_image_queue_has_no_run_or_retry_action(tmp_path: Path) -> None:
     assert load_extracted_rows(tmp_path, record.record_id) == []
 
 
-def test_busy_lock_shows_banner_and_changes_no_queue_or_result_state(tmp_path: Path) -> None:
+def test_busy_lock_shows_banner_and_changes_no_queue_or_result_state(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    from eidp.web.services import extraction as extraction_service
+
+    recording_log = _RecordingLog()
+    monkeypatch.setattr(extraction_service, "log", recording_log)
     record = _store_intake(tmp_path, pdf_kind=PdfKind.TEXT)
     app = _run_queue_app(tmp_path)
     before_item = _queue_item(tmp_path, record.record_id)
     before_job_bytes = (tmp_path / "extraction" / "jobs" / f"{record.record_id}.json").read_bytes()
 
-    with capture_logs() as logs, acquire_lock(tmp_path / ".lock", owner="background_job"):
+    with acquire_lock(tmp_path / ".lock", owner="background_job"):
         _button(app, label="Run").click()
         app.run(timeout=30)
 
@@ -143,4 +163,4 @@ def test_busy_lock_shows_banner_and_changes_no_queue_or_result_state(tmp_path: P
     assert _queue_item(tmp_path, record.record_id) == before_item
     assert (tmp_path / "extraction" / "jobs" / f"{record.record_id}.json").read_bytes() == before_job_bytes
     assert load_extracted_rows(tmp_path, record.record_id) == []
-    assert not [event for event in logs if event.get("event") == "served_extraction_requested"]
+    assert not [event for event in recording_log.events if event.get("event") == "served_extraction_requested"]

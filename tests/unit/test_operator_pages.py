@@ -35,12 +35,25 @@ def _render_url_submission_for_test(session):  # noqa: ANN001, ANN201
     pages.page_url_submission(session)
 
 
-def test_url_submission_page_accepts_shared_lock_from_app() -> None:
+def test_retired_legacy_app_fails_closed_before_session_or_render(monkeypatch: pytest.MonkeyPatch) -> None:
+    from eidp.review import app as legacy_review_app
+
     signature = inspect.signature(operator_pages.page_url_submission)
-    app_source = Path("src/eidp/review/app.py").read_text(encoding="utf-8")
+    unexpected_calls: list[str] = []
+
+    def unexpected_session() -> None:
+        unexpected_calls.append("session")
+
+    def unexpected_render() -> None:
+        unexpected_calls.append("render")
+
+    monkeypatch.setattr(legacy_review_app, "SessionLocal", unexpected_session)
+    monkeypatch.setattr(legacy_review_app, "_render_sidebar_navigation", unexpected_render)
 
     assert "lock_path" in signature.parameters
-    assert 'page_url_submission(session, lock_path=Path(settings.data_dir) / ".lock")' in app_source
+    with pytest.raises(RuntimeError, match="Legacy review app is retired"):
+        legacy_review_app.main()
+    assert unexpected_calls == []
 
 
 def test_output_path_allows_output_and_rejects_traversal() -> None:

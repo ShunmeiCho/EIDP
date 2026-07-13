@@ -24,9 +24,13 @@ def test_ci_preserves_required_check_name_with_linux_web_contract() -> None:
     assert "tests/unit/test_linux_web_release_contract.py" in WORKFLOW
     assert "tests/unit/test_web_write_lock_contract.py" in WORKFLOW
     assert "tests/integration/test_linux_web_e2e_chain.py" in WORKFLOW
+    assert "tests/integration/test_served_linux_web_chain.py" in WORKFLOW
     assert "Web entry-point import smoke" in WORKFLOW
     assert "Streamlit loopback health smoke" in WORKFLOW
-    assert "STREAMLIT_SERVER_PORT=8502 deploy/linux/run_web.sh" in WORKFLOW
+    assert (
+        "EIDP_IDENTITY_MODE=configured_fallback EIDP_FALLBACK_ACTOR=ci-smoke "
+        "STREAMLIT_SERVER_PORT=8502 deploy/linux/run_web.sh"
+    ) in WORKFLOW
     assert "http://127.0.0.1:8502/_stcore/health" in WORKFLOW
 
 

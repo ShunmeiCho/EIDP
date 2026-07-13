@@ -30,7 +30,7 @@ class ReviewAppFixture:
 
 def _render_extraction_review_for_test(intake_root, session_factory):  # noqa: ANN001, ANN201
     from eidp.identity import IdentitySource, ResolvedIdentity
-    from eidp.web.pages.extraction_review import render_extraction_review_page
+    from eidp.web.views.extraction_review import render_extraction_review_page
 
     render_extraction_review_page(
         identity=ResolvedIdentity("app-test-reviewer", IdentitySource.CONFIGURED_FALLBACK),
@@ -236,7 +236,7 @@ def test_audit_outbox_runs_only_after_the_decision_commit(
     review_app: ReviewAppFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from eidp.web.pages import extraction_review as page
+    from eidp.web.views import extraction_review as page
 
     real_flush = page.flush_audit_outbox
     committed_before_flush: list[bool] = []

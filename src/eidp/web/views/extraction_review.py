@@ -1,4 +1,4 @@
-"""Extraction review page for Linux/Web MVP."""
+"""Extraction review page body for Linux/Web MVP."""
 
 from __future__ import annotations
 

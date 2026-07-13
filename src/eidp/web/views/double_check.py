@@ -1,4 +1,4 @@
-"""Persistent external double-check and audited resolution page."""
+"""Persistent external double-check and audited resolution page body."""
 
 from __future__ import annotations
 

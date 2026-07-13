@@ -9,7 +9,9 @@ from types import ModuleType
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import CheckConstraint, UniqueConstraint, create_engine, event, select
+from alembic.migration import MigrationContext
+from alembic.operations import Operations
+from sqlalchemy import CheckConstraint, UniqueConstraint, create_engine, event, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -359,6 +361,107 @@ def test_database_check_rejects_invalid_exclude_reason(
 
     assert session.scalar(select(_decision_model())) is None
     assert session.scalar(select(ManualActionLog)) is None
+
+
+@pytest.mark.parametrize("operation", ["update", "delete"])
+def test_base_metadata_sqlite_rejects_raw_review_decision_mutation(
+    engine,  # noqa: ANN001
+    session: Session,
+    record: ExtractionReviewRecord,
+    operation: str,
+) -> None:
+    module = _review_decision_module()
+    decision = module.apply_review_decision(
+        session,
+        record=record,
+        decision=module.ReviewDecision.ACCEPT,
+        corrected_value=None,
+        note="source checked",
+        identity=ResolvedIdentity("reviewer-1", IdentitySource.TRUSTED_PROXY),
+    )
+    session.commit()
+    statement = (
+        "UPDATE extraction_review_decision SET note = note WHERE id = :decision_id"
+        if operation == "update"
+        else "DELETE FROM extraction_review_decision WHERE id = :decision_id"
+    )
+
+    with engine.connect() as connection:
+        with pytest.raises(IntegrityError, match="immutable|append-only"):
+            connection.execute(text(statement), {"decision_id": decision.id})
+        connection.rollback()
+
+
+@pytest.mark.parametrize("operation", ["update", "delete"])
+def test_alembic_upgraded_sqlite_rejects_raw_review_decision_mutation(
+    tmp_path: Path,
+    operation: str,
+) -> None:
+    migration_path = (
+        Path(__file__).resolve().parents[2]
+        / "migrations/versions/9d0e1f2a3b4c_add_extraction_review_decisions.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "task4_review_decision_immutability_migration",
+        migration_path,
+    )
+    assert spec is not None and spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    migrated_engine = create_engine(
+        f"sqlite:///{tmp_path / 'migrated-review-decision.sqlite3'}",
+        future=True,
+    )
+    try:
+        ManualActionLog.__table__.create(migrated_engine)
+        with migrated_engine.begin() as connection:
+            migration.op = Operations(MigrationContext.configure(connection))
+            migration.upgrade()
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO manual_action_log (
+                        action_id, actor, identity_source, action_type, target_table
+                    ) VALUES (
+                        :action_id, 'reviewer-1', 'trusted_proxy',
+                        'extraction_review_decision', 'extraction_review_decision'
+                    )
+                    """
+                ),
+                {"action_id": "00000000-0000-4000-8000-000000000001"},
+            )
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO extraction_review_decision (
+                        decision_id, review_id, revision, decision, actor,
+                        identity_source, audit_action_id
+                    ) VALUES (
+                        '00000000-0000-4000-8000-000000000002',
+                        'metric-review-1', 1, 'accept', 'reviewer-1',
+                        'trusted_proxy', '00000000-0000-4000-8000-000000000001'
+                    )
+                    """
+                )
+            )
+
+        statement = (
+            "UPDATE extraction_review_decision SET note = note WHERE id = 1"
+            if operation == "update"
+            else "DELETE FROM extraction_review_decision WHERE id = 1"
+        )
+        with migrated_engine.connect() as connection:
+            with pytest.raises(IntegrityError, match="immutable|append-only"):
+                connection.execute(text(statement))
+            connection.rollback()
+
+        with migrated_engine.begin() as connection:
+            migration.op = Operations(MigrationContext.configure(connection))
+            migration.downgrade()
+        assert "extraction_review_decision" not in inspect(migrated_engine).get_table_names()
+    finally:
+        migrated_engine.dispose()
 
 
 def test_migration_contract() -> None:

@@ -6,8 +6,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from eidp.db.locking import LockBusyError, acquire_lock
+from eidp.db.models import Base
 from eidp.web.locking import acquire_web_write_lock, web_write_lock_path
 
 
@@ -33,11 +37,11 @@ def test_web_write_lock_rejects_concurrent_writer(tmp_path: Path) -> None:
     ("page", "mutators"),
     [
         (
-            Path("src/eidp/web/pages/pdf_intake.py"),
+            Path("src/eidp/web/views/pdf_intake.py"),
             {"store_pdf_upload", "store_zip_upload", "register_url_csv", "ensure_extraction_queue"},
         ),
-        (Path("src/eidp/web/pages/extraction_queue.py"), {"ensure_extraction_queue", "run_extraction"}),
-        (Path("src/eidp/web/pages/extraction_review.py"), {"ensure_review_records"}),
+        (Path("src/eidp/web/views/extraction_queue.py"), {"ensure_extraction_queue", "run_extraction"}),
+        (Path("src/eidp/web/views/extraction_review.py"), {"ensure_review_records"}),
     ],
 )
 def test_direct_web_mutations_are_inside_shared_write_lock(page: Path, mutators: set[str]) -> None:
@@ -46,8 +50,15 @@ def test_direct_web_mutations_are_inside_shared_write_lock(page: Path, mutators:
 
 
 def test_review_action_callable_runs_inside_shared_write_lock(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    from eidp.web.pages import extraction_review
+    from eidp.web.views import extraction_review
 
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     lock_held = False
 
     @contextlib.contextmanager
@@ -61,19 +72,22 @@ def test_review_action_callable_runs_inside_shared_write_lock(monkeypatch: pytes
 
     called = False
 
-    def action() -> None:
+    def action(session: Session) -> None:
         nonlocal called
         assert lock_held
+        assert session.bind is engine
         called = True
 
     monkeypatch.setattr(extraction_review, "acquire_web_write_lock", fake_lock)
+    monkeypatch.setattr(extraction_review, "flush_audit_outbox", lambda *_args, **_kwargs: {"failed": 0})
     monkeypatch.setattr(extraction_review.st, "success", lambda _message: None)
     monkeypatch.setattr(extraction_review.st, "rerun", lambda: None)
 
-    extraction_review._run_action(tmp_path, action)
+    extraction_review._run_action(tmp_path, session_factory=session_factory, action=action)
 
     assert called
     assert lock_held is False
+    engine.dispose()
 
 
 def _call_name(node: ast.Call) -> str | None:

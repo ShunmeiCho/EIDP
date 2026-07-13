@@ -18,11 +18,11 @@ from eidp.identity import IdentitySource, ResolvedIdentity
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERIC_REJECTION_MESSAGE = "This EIDP request cannot be authenticated."
 PAGE_ENTRYPOINTS = [
-    ("01_pdf_intake.py", "eidp.web.pages.pdf_intake", "render_pdf_intake_page"),
-    ("02_extraction_queue.py", "eidp.web.pages.extraction_queue", "render_extraction_queue_page"),
-    ("03_extraction_review.py", "eidp.web.pages.extraction_review", "render_extraction_review_page"),
-    ("04_review_diff.py", "eidp.web.pages.review_diff", "render_review_diff_page"),
-    ("05_double_check.py", "eidp.web.pages.double_check", "render_double_check_page"),
+    ("01_pdf_intake.py", "eidp.web.views.pdf_intake", "render_pdf_intake_page"),
+    ("02_extraction_queue.py", "eidp.web.views.extraction_queue", "render_extraction_queue_page"),
+    ("03_extraction_review.py", "eidp.web.views.extraction_review", "render_extraction_review_page"),
+    ("04_review_diff.py", "eidp.web.views.review_diff", "render_review_diff_page"),
+    ("05_double_check.py", "eidp.web.views.double_check", "render_double_check_page"),
 ]
 
 
@@ -153,7 +153,7 @@ def test_root_app_bootstraps_once_and_passes_same_typed_identity(monkeypatch: py
 
     import eidp.logging_config as logging_config_module
     import eidp.web.bootstrap as bootstrap_module
-    import eidp.web.pages.pdf_intake as body_module
+    import eidp.web.views.pdf_intake as body_module
 
     identity = ResolvedIdentity("root-user", IdentitySource.TRUSTED_PROXY)
     bootstrap_calls: list[None] = []
