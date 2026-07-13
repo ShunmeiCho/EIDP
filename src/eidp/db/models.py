@@ -399,6 +399,7 @@ class ManualActionLog(Base):
     action_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True)  # UUID4
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     actor: Mapped[str] = mapped_column(String(50), nullable=False, default="operator")
+    identity_source: Mapped[str | None] = mapped_column(String(32))
     action_type: Mapped[str] = mapped_column(String(50), nullable=False)
     target_table: Mapped[str] = mapped_column(String(50), nullable=False)
     target_id: Mapped[int | None] = mapped_column(Integer)

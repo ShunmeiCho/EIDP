@@ -20,11 +20,12 @@ SchoolYearStatus are not exercised here.
 
 from __future__ import annotations
 
+import importlib.util
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, func, inspect, text
+from sqlalchemy import create_engine, event, func, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -786,6 +787,95 @@ def test_bootstrap_adds_department_change_void_columns_to_existing_sqlite_db(sql
             )
         )
         session.flush()
+
+
+def test_bootstrap_adds_nullable_audit_identity_source_without_rewriting_history(sqlite_engine):
+    with sqlite_engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE manual_action_log (
+                id INTEGER PRIMARY KEY,
+                action_id VARCHAR(36) NOT NULL UNIQUE,
+                timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                actor VARCHAR(50) NOT NULL DEFAULT 'operator',
+                action_type VARCHAR(50) NOT NULL,
+                target_table VARCHAR(50) NOT NULL,
+                target_id INTEGER,
+                document_id INTEGER,
+                old_value TEXT,
+                new_value TEXT,
+                reason TEXT,
+                jsonl_exported_at DATETIME,
+                jsonl_export_error TEXT
+            )
+        """))
+        conn.execute(text("""
+            INSERT INTO manual_action_log (action_id, actor, action_type, target_table)
+            VALUES ('legacy-action-id', 'operator', 'legacy', 'document')
+        """))
+
+    statements: list[str] = []
+
+    def record_statement(_conn, _cursor, statement, _parameters, _context, _executemany):
+        statements.append(" ".join(statement.split()))
+
+    event.listen(sqlite_engine, "before_cursor_execute", record_statement)
+    try:
+        bootstrap_sqlite(sqlite_engine)
+    finally:
+        event.remove(sqlite_engine, "before_cursor_execute", record_statement)
+
+    columns = {column["name"]: column for column in inspect(sqlite_engine).get_columns("manual_action_log")}
+    assert columns["identity_source"]["nullable"] is True
+
+    with sqlite_engine.connect() as conn:
+        legacy_row = conn.execute(
+            text("SELECT action_id, identity_source FROM manual_action_log WHERE action_id = 'legacy-action-id'")
+        ).one()
+    assert legacy_row == ("legacy-action-id", None)
+
+    manual_log_statements = [statement for statement in statements if "manual_action_log" in statement.lower()]
+    assert manual_log_statements.count(
+        "ALTER TABLE manual_action_log ADD COLUMN identity_source VARCHAR(32)"
+    ) == 1
+    forbidden_prefixes = (
+        "UPDATE MANUAL_ACTION_LOG",
+        "INSERT INTO MANUAL_ACTION_LOG",
+        "CREATE TABLE MANUAL_ACTION_LOG",
+        "DROP TABLE MANUAL_ACTION_LOG",
+    )
+    assert not any(statement.upper().startswith(forbidden_prefixes) for statement in manual_log_statements)
+    assert not any(" RENAME TO MANUAL_ACTION_LOG" in statement.upper() for statement in manual_log_statements)
+
+
+def test_audit_identity_source_migration_is_nullable_add_column_only(monkeypatch):
+    migration_path = (
+        Path(__file__).resolve().parents[2]
+        / "migrations"
+        / "versions"
+        / "8c9d0e1f2a3b_add_audit_identity_source.py"
+    )
+    assert migration_path.is_file(), "identity_source migration must exist"
+    spec = importlib.util.spec_from_file_location("audit_identity_source_migration", migration_path)
+    assert spec is not None and spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    calls: list[tuple[str, object]] = []
+
+    class AddColumnOnly:
+        def add_column(self, table_name: str, column: object) -> None:
+            calls.append((table_name, column))
+
+    monkeypatch.setattr(migration, "op", AddColumnOnly())
+    migration.upgrade()
+
+    assert migration.down_revision == "7b8c9d0e1f2a"
+    assert len(calls) == 1
+    table_name, column = calls[0]
+    assert table_name == "manual_action_log"
+    assert column.name == "identity_source"
+    assert str(column.type) == "VARCHAR(32)"
+    assert column.nullable is True
 
 
 # ---------------------------------------------------------------------------

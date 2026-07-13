@@ -14,9 +14,8 @@ fail on SQLite. For the Linux/Web single-writer deployment we therefore:
 4. Stamp alembic ``head`` so the schema appears already-migrated and future
    migrations only run for additive changes.
 
-This module deliberately does NOT touch SupportRecipient/SchoolYearStatus
-revision rework, audit tables, or confidence_breakdown — those land in
-Phase 8.2.
+Schema repairs in this module stay additive unless an existing contract has an
+explicit, separately tested data-cleanup step.
 """
 
 from __future__ import annotations
@@ -86,6 +85,10 @@ _DEPARTMENT_CHANGE_VOID_COLUMNS = {
     "voided_by": "VARCHAR(50)",
     "void_reason": "TEXT",
 }
+
+_MANUAL_ACTION_LOG_IDENTITY_SOURCE_DDL = (
+    "ALTER TABLE manual_action_log ADD COLUMN identity_source VARCHAR(32)"
+)
 
 
 def _resolve_alembic_ini() -> Path:
@@ -164,13 +167,16 @@ def ensure_sqlite_additive_columns(engine: Engine) -> None:
     needed by current ORM code must be patched here.
     """
     with engine.begin() as conn:
-        rows = conn.execute(text("PRAGMA table_info(department_change)")).mappings().all()
-        if not rows:
-            return
-        existing = {str(row["name"]) for row in rows}
+        department_change_rows = conn.execute(text("PRAGMA table_info(department_change)")).mappings().all()
+        department_change_columns = {str(row["name"]) for row in department_change_rows}
         for column_name, column_type in _DEPARTMENT_CHANGE_VOID_COLUMNS.items():
-            if column_name not in existing:
+            if department_change_rows and column_name not in department_change_columns:
                 conn.execute(text(f"ALTER TABLE department_change ADD COLUMN {column_name} {column_type}"))
+
+        audit_rows = conn.execute(text("PRAGMA table_info(manual_action_log)")).mappings().all()
+        audit_columns = {str(row["name"]) for row in audit_rows}
+        if audit_rows and "identity_source" not in audit_columns:
+            conn.execute(text(_MANUAL_ACTION_LOG_IDENTITY_SOURCE_DDL))
 
 
 def apply_sqlite_pragmas(engine: Engine) -> None:

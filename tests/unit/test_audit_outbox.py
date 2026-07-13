@@ -24,6 +24,7 @@ from eidp.db.audit import log_manual_action
 from eidp.db.audit_outbox import flush_audit_outbox
 from eidp.db.models import ManualActionLog
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
+from eidp.identity import SYSTEM_IDENTITY, IdentitySource, ResolvedIdentity
 
 
 @pytest.fixture()
@@ -89,6 +90,66 @@ def test_log_manual_action_none_values_remain_null(engine):
 
         assert row.old_value is None
         assert row.new_value is not None
+
+
+def test_log_manual_action_persists_all_identity_sources(engine):
+    with Session(engine) as session:
+        for source in IdentitySource:
+            actor = f"actor-{source.value}"
+            row = log_manual_action(
+                session,
+                action_type="identity_provenance",
+                target_table="document",
+                identity=ResolvedIdentity(actor=actor, source=source),
+            )
+            assert row.actor == actor
+            assert row.identity_source == source.value
+        session.commit()
+
+
+def test_log_manual_action_keeps_actor_callers_compatible(engine):
+    with Session(engine) as session:
+        row = log_manual_action(
+            session,
+            action_type="legacy_actor_call",
+            target_table="document",
+            actor="existing-operator",
+        )
+        session.commit()
+
+        assert row.actor == "existing-operator"
+        assert row.identity_source == "legacy_unspecified"
+
+
+def test_log_manual_action_rejects_identity_and_actor_together(engine):
+    with Session(engine) as session, pytest.raises(ValueError, match="pass identity or actor, not both"):
+        log_manual_action(
+            session,
+            action_type="ambiguous_identity",
+            target_table="document",
+            actor="legacy-operator",
+            identity=SYSTEM_IDENTITY,
+        )
+
+
+def test_legacy_null_identity_source_exports_as_legacy_unspecified(engine, tmp_path):
+    jsonl = tmp_path / "manual-actions.jsonl"
+
+    with Session(engine) as session:
+        row = ManualActionLog(
+            action_id=str(uuid.uuid4()),
+            actor="operator",
+            action_type="legacy",
+            target_table="document",
+            identity_source=None,
+        )
+        session.add(row)
+        session.commit()
+
+        flush_audit_outbox(session, jsonl_path=jsonl)
+
+    payload = json.loads(jsonl.read_text(encoding="utf-8").splitlines()[0])
+    assert payload["identity_source"] == "legacy_unspecified"
 
 
 def test_flush_outbox_writes_pending_rows_to_jsonl(engine, tmp_path):
@@ -225,7 +286,9 @@ def test_flush_outbox_retry_after_fsync_failure_dedups_partial_line(engine, tmp_
 
     lines = [ln for ln in jsonl.read_text(encoding="utf-8").splitlines() if ln.strip()]
     assert len(lines) == 1
-    assert json.loads(lines[0])["action_id"] == action_id
+    payload = json.loads(lines[0])
+    assert payload["action_id"] == action_id
+    assert payload["identity_source"] == "legacy_unspecified"
 
 
 def test_flush_outbox_dedups_when_action_id_already_in_file(engine, tmp_path):

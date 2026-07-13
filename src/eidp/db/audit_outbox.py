@@ -27,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from eidp.db.models import ManualActionLog
+from eidp.identity import IdentitySource
 
 DEFAULT_OUTBOX_PATH = Path("data/audit/manual-actions.jsonl")
 OUTBOX_ARCHIVE_GLOB = "manual-actions-*.jsonl"
@@ -80,6 +81,11 @@ def _row_to_dict(row: ManualActionLog) -> dict[str, object]:
         "action_id": row.action_id,
         "timestamp": row.timestamp.isoformat() if row.timestamp else None,
         "actor": row.actor,
+        "identity_source": (
+            row.identity_source
+            if row.identity_source is not None
+            else IdentitySource.LEGACY_UNSPECIFIED.value
+        ),
         "action_type": row.action_type,
         "target_table": row.target_table,
         "target_id": row.target_id,
