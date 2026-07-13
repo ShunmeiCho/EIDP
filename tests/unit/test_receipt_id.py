@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 from eidp.ops.receipt_id import require_receipt_id
 
 
