@@ -11,9 +11,13 @@ PDF_BYTES = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n"
 
 
 def _render_pdf_intake_for_test(intake_root):  # noqa: ANN001, ANN201
+    from eidp.identity import IdentitySource, ResolvedIdentity
     from eidp.web.pages.pdf_intake import render_pdf_intake_page
 
-    render_pdf_intake_page(intake_root=intake_root)
+    render_pdf_intake_page(
+        identity=ResolvedIdentity("app-test-operator", IdentitySource.CONFIGURED_FALLBACK),
+        intake_root=intake_root,
+    )
 
 
 def _configured_pdf_intake_app(intake_root: Path, *, filename: str) -> AppTest:

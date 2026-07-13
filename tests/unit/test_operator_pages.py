@@ -554,20 +554,18 @@ def test_record_operator_submission_appends_jsonl(tmp_path: Path) -> None:
     assert json.loads(lines[0])["operator_note"] == "note"
 
 
-def test_operator_ui_cli_launches_streamlit(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls: list[list[str]] = []
+def test_operator_ui_cli_is_retired_without_spawning_streamlit(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
 
-    def fake_run(cmd: list[str], check: bool) -> None:
-        calls.append(cmd)
-        assert check is True
+    def fake_run(*args: object, **kwargs: object) -> None:
+        calls.append((args, kwargs))
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     result = CliRunner().invoke(app, ["operator-ui", "--port", "8765"])
 
-    assert result.exit_code == 0
-    assert calls
-    assert calls[0][-2:] == ["--server.port", "8765"]
-    assert calls[0][1:4] == ["-m", "streamlit", "run"]
+    assert result.exit_code == 2
+    assert "No such command 'operator-ui'" in result.output
+    assert calls == []
 
 
 def test_next_focus_idx_after_decision_keeps_next_item_visible() -> None:

@@ -8,6 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 from eidp.config import settings
+from eidp.identity import ResolvedIdentity
 from eidp.pipeline.double_check_compare import (
     DoubleCheckResultRow,
     compare_external_to_reviewed,
@@ -24,7 +25,7 @@ from eidp.pipeline.extraction_review import load_review_records
 from eidp.pipeline.review_report import reviewed_rows_from_records
 
 
-def render_double_check_page(*, intake_root: Path | None = None) -> None:
+def render_double_check_page(*, identity: ResolvedIdentity, intake_root: Path | None = None) -> None:
     resolved_root = intake_root or Path(settings.data_dir) / "web-intake"
 
     st.title("EIDP Double Check")

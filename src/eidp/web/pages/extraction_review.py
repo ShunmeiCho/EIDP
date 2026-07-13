@@ -8,6 +8,7 @@ import streamlit as st
 
 from eidp.config import settings
 from eidp.db.locking import LockBusyError
+from eidp.identity import ResolvedIdentity
 from eidp.pipeline.extraction_review import (
     ReviewStatus,
     ReviewValidationError,
@@ -24,7 +25,7 @@ from eidp.web.components.extracted_rows_table import render_extracted_review_tab
 from eidp.web.locking import acquire_web_write_lock
 
 
-def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
+def render_extraction_review_page(*, identity: ResolvedIdentity, intake_root: Path | None = None) -> None:
     resolved_root = intake_root or Path(settings.data_dir) / "web-intake"
     st.title("EIDP Extraction Review")
     st.caption("Review extracted rows and evidence. This page does not write final Excel output.")

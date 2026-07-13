@@ -1,13 +1,13 @@
-"""Streamlit review queue for school identity resolution (Step 6).
+"""Importable helpers from the retired legacy Streamlit review queue.
 
-Launch with: eidp review-ui
-Or directly: streamlit run src/eidp/review/app.py
+Run the supported application through ``deploy/linux/run_web.sh``; its entrypoint
+is ``src/eidp/web/app.py``.
 """
 
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, NoReturn, Protocol
 
 import streamlit as st
 import structlog
@@ -20,8 +20,6 @@ from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import ReviewItem, School, SchoolAlias
 from eidp.db.session import SessionLocal
 from eidp.fiscal_year import format_fiscal_year_label
-from eidp.logging_config import configure_logging
-from eidp.review import operator_pages
 from eidp.review.operator_actor import operator_actor_from_state
 
 log = structlog.get_logger(__name__)
@@ -738,102 +736,15 @@ def _page_history(session: Session) -> None:
                 st.caption(f"Notes: {item.notes}")
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
+LEGACY_REVIEW_APP_RETIRED_MESSAGE = (
+    "Legacy review app is retired. Start the supported EIDP Web app with "
+    "deploy/linux/run_web.sh, which serves src/eidp/web/app.py."
+)
 
-def main() -> None:
-    configure_logging()
-    st.set_page_config(
-        page_title="EIDP Operator Console",
-        page_icon=":material/school:",
-        layout="wide",
-    )
-    operator_pages.inject_v1_theme()
-    st.markdown(
-        '<div class="eidp-title"><span class="eidp-brand">EIDP</span>'
-        '<span class="eidp-brand-sub">運用コンソール</span></div>',
-        unsafe_allow_html=True,
-    )
-    _render_bug_signal_banner(settings.app_root)
 
-    with _get_session() as session:
-        # Live TODO counts at top of sidebar — 担当者 sees what to do at a glance.
-        operator_pages.render_sidebar_todo(session)
-        st.sidebar.text_input(
-            "担当者名（監査用）",
-            key="operator_name",
-            value=st.session_state.get("operator_name", ""),
-            placeholder="例: 山田",
-        )
-
-        page = _render_sidebar_navigation()
-
-        if page == PAGE_TASKS:
-            from eidp.review._pages.school_year_tasks import render as render_school_year_tasks
-            render_school_year_tasks(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_STATUS:
-            operator_pages.page_pipeline_status(session)
-        elif page == PAGE_PROPOSALS:
-            operator_pages.page_proposals_review(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_URL:
-            operator_pages.page_url_submission(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_EXPORTS:
-            operator_pages.page_exports(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_GAPS:
-            operator_pages.page_gap_report()
-        elif page == PAGE_REJECTIONS:
-            operator_pages.page_rejections()
-        elif page == PAGE_PREFECTURE_REMARKS:
-            from eidp.review._pages.prefecture_remarks import render as render_prefecture_remarks
-            render_prefecture_remarks(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_URL_CANDIDATE_REVIEW:
-            from eidp.review._pages.url_candidate_review import render as render_url_candidate_review
-            render_url_candidate_review(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_SETTINGS:
-            from eidp.review._pages.settings_page import render as render_settings
-            render_settings(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_SCHOOL_CODE:
-            _page_review_queue(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_HISTORY:
-            _page_history(session)
-        elif page == PAGE_MANUAL_ENTRY:
-            # Sprint 8.4.c.1 — business-user main battlefield. Lock path is
-            # ``data/.lock`` per v6 architecture, resolved against the
-            # configured data_dir so the same file is shared with the
-            # weekly runner.
-            from eidp.review._pages.pdf_manual_entry import render as render_manual_entry
-            render_manual_entry(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_FISCAL_YEAR_OVERRIDE:
-            # Sprint 8.4.c.2 — operator confirms a document's fiscal_year
-            # via the 4-table atomic rewrite path
-            # (pipeline.fiscal_year_override.override_fiscal_year).
-            from eidp.review._pages.fiscal_year_override import render as render_fiscal_year_override
-            render_fiscal_year_override(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_EXCEL_PREVIEW:
-            # Sprint 8.4.c.3 — read-only dry-run before download.
-            from eidp.review._pages.excel_preview import render as render_excel_preview
-            render_excel_preview(session, lock_path=Path(settings.data_dir) / ".lock")
-        elif page == PAGE_AUDIT_LOG:
-            # Sprint 8.4.c.4 — manual_action_log browser + outbox flush.
-            from eidp.review._pages.audit_log import render as render_audit_log
-            data_dir = Path(settings.data_dir)
-            render_audit_log(
-                session,
-                lock_path=data_dir / ".lock",
-                jsonl_path=data_dir / "audit" / "manual-actions.jsonl",
-            )
-        elif page == PAGE_BUG_REPORT:
-            from eidp.review._pages.bug_report import render as render_bug_report
-            render_bug_report(session, app_root=settings.app_root)
-
-    # Sidebar info
-    st.sidebar.divider()
-    st.sidebar.caption("週次運用フロー")
-    st.sidebar.caption(
-        "① 学校キュー → 情報公開ページ追加/申請書PDF確認 → 対象年度確認 → Excel出力"
-    )
-    st.sidebar.caption(_build_info_caption(settings.app_root))
+def main() -> NoReturn:
+    """Reject executable use before logging, rendering, or opening a session."""
+    raise RuntimeError(LEGACY_REVIEW_APP_RETIRED_MESSAGE)
 
 
 if __name__ == "__main__":

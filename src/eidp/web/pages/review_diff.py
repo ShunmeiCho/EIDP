@@ -8,6 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 from eidp.config import settings
+from eidp.identity import ResolvedIdentity
 from eidp.pipeline.extraction_review import load_review_records
 from eidp.pipeline.review_master_diff import (
     DiffResultRow,
@@ -23,7 +24,9 @@ from eidp.pipeline.review_report import (
 )
 
 
-def render_review_diff_page(*, intake_root: Path | None = None, master_path: Path | None = None) -> None:
+def render_review_diff_page(
+    *, identity: ResolvedIdentity, intake_root: Path | None = None, master_path: Path | None = None
+) -> None:
     resolved_root = intake_root or Path(settings.data_dir) / "web-intake"
     resolved_master = master_path or Path(settings.app_root) / "data" / "master.xlsx"
 
