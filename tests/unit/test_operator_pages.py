@@ -35,12 +35,25 @@ def _render_url_submission_for_test(session):  # noqa: ANN001, ANN201
     pages.page_url_submission(session)
 
 
-def test_url_submission_page_accepts_shared_lock_from_app() -> None:
+def test_retired_legacy_app_fails_closed_before_session_or_render(monkeypatch: pytest.MonkeyPatch) -> None:
+    from eidp.review import app as legacy_review_app
+
     signature = inspect.signature(operator_pages.page_url_submission)
-    app_source = Path("src/eidp/review/app.py").read_text(encoding="utf-8")
+    unexpected_calls: list[str] = []
+
+    def unexpected_session() -> None:
+        unexpected_calls.append("session")
+
+    def unexpected_render() -> None:
+        unexpected_calls.append("render")
+
+    monkeypatch.setattr(legacy_review_app, "SessionLocal", unexpected_session)
+    monkeypatch.setattr(legacy_review_app, "_render_sidebar_navigation", unexpected_render)
 
     assert "lock_path" in signature.parameters
-    assert 'page_url_submission(session, lock_path=Path(settings.data_dir) / ".lock")' in app_source
+    with pytest.raises(RuntimeError, match="Legacy review app is retired"):
+        legacy_review_app.main()
+    assert unexpected_calls == []
 
 
 def test_output_path_allows_output_and_rejects_traversal() -> None:
@@ -554,20 +567,18 @@ def test_record_operator_submission_appends_jsonl(tmp_path: Path) -> None:
     assert json.loads(lines[0])["operator_note"] == "note"
 
 
-def test_operator_ui_cli_launches_streamlit(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls: list[list[str]] = []
+def test_operator_ui_cli_is_retired_without_spawning_streamlit(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
 
-    def fake_run(cmd: list[str], check: bool) -> None:
-        calls.append(cmd)
-        assert check is True
+    def fake_run(*args: object, **kwargs: object) -> None:
+        calls.append((args, kwargs))
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     result = CliRunner().invoke(app, ["operator-ui", "--port", "8765"])
 
-    assert result.exit_code == 0
-    assert calls
-    assert calls[0][-2:] == ["--server.port", "8765"]
-    assert calls[0][1:4] == ["-m", "streamlit", "run"]
+    assert result.exit_code == 2
+    assert "No such command 'operator-ui'" in result.output
+    assert calls == []
 
 
 def test_next_focus_idx_after_decision_keeps_next_item_visible() -> None:

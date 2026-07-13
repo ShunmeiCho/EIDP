@@ -1,4 +1,4 @@
-"""Review report and master-diff page for Linux/Web MVP."""
+"""Review report and master-diff page body for Linux/Web MVP."""
 
 from __future__ import annotations
 
@@ -6,9 +6,12 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import streamlit as st
+from sqlalchemy.orm import Session, sessionmaker
 
 from eidp.config import settings
+from eidp.identity import ResolvedIdentity
 from eidp.pipeline.extraction_review import load_review_records
+from eidp.pipeline.review_decision import overlay_review_decisions
 from eidp.pipeline.review_master_diff import (
     DiffResultRow,
     diff_report_csv,
@@ -23,7 +26,13 @@ from eidp.pipeline.review_report import (
 )
 
 
-def render_review_diff_page(*, intake_root: Path | None = None, master_path: Path | None = None) -> None:
+def render_review_diff_page(
+    *,
+    identity: ResolvedIdentity,
+    session_factory: sessionmaker[Session],
+    intake_root: Path | None = None,
+    master_path: Path | None = None,
+) -> None:
     resolved_root = intake_root or Path(settings.data_dir) / "web-intake"
     resolved_master = master_path or Path(settings.app_root) / "data" / "master.xlsx"
 
@@ -31,6 +40,8 @@ def render_review_diff_page(*, intake_root: Path | None = None, master_path: Pat
     st.caption("Compare reviewed extraction rows with a read-only master subset. Final Excel output is out of scope.")
 
     review_records = load_review_records(resolved_root)
+    with session_factory() as session:
+        review_records = overlay_review_decisions(session, review_records)
     reviewed_rows = reviewed_rows_from_records(review_records)
     comparable_count = sum(1 for row in reviewed_rows if row.final_review_value is not None)
     needs_work_count = sum(1 for row in reviewed_rows if row.metric and row.final_review_value is None)
@@ -48,7 +59,7 @@ def render_review_diff_page(*, intake_root: Path | None = None, master_path: Pat
     )
 
     st.subheader("Master subset")
-    master_path_text = st.text_input("master.xlsx", value=str(resolved_master))
+    st.caption("Source: managed read-only master.xlsx")
     school_options = sorted({row.school_name for row in reviewed_rows})
     selected_school = ""
     if school_options:
@@ -62,7 +73,7 @@ def render_review_diff_page(*, intake_root: Path | None = None, master_path: Pat
 
     try:
         expected_rows = load_master_expected_subset(
-            Path(master_path_text),
+            resolved_master,
             corporation_name=corporation_name,
             school_name=selected_school,
             fiscal_year=fiscal_year,

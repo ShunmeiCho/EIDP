@@ -1,13 +1,17 @@
-"""Extraction review page for Linux/Web MVP."""
+"""Extraction review page body for Linux/Web MVP."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import streamlit as st
+from sqlalchemy.orm import Session, sessionmaker
 
 from eidp.config import settings
+from eidp.db.audit_outbox import flush_audit_outbox
 from eidp.db.locking import LockBusyError
+from eidp.identity import ResolvedIdentity
 from eidp.pipeline.extraction_review import (
     ReviewStatus,
     ReviewValidationError,
@@ -17,14 +21,19 @@ from eidp.pipeline.extraction_review import (
     exclude_review_record,
     load_review_records,
     mark_review_needs_review,
-    review_report_csv,
 )
+from eidp.pipeline.review_decision import overlay_review_decisions
 from eidp.web.components.evidence_panel import render_evidence_panel
 from eidp.web.components.extracted_rows_table import render_extracted_review_table
-from eidp.web.locking import acquire_web_write_lock
+from eidp.web.locking import acquire_web_write_lock, web_write_lock_path
 
 
-def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
+def render_extraction_review_page(
+    *,
+    identity: ResolvedIdentity,
+    session_factory: sessionmaker[Session],
+    intake_root: Path | None = None,
+) -> None:
     resolved_root = intake_root or Path(settings.data_dir) / "web-intake"
     st.title("EIDP Extraction Review")
     st.caption("Review extracted rows and evidence. This page does not write final Excel output.")
@@ -35,6 +44,8 @@ def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
     except LockBusyError as exc:
         st.warning(str(exc))
         records = load_review_records(resolved_root)
+    with session_factory() as session:
+        records = overlay_review_decisions(session, records)
     extracted_count = sum(1 for record in records if record.metric)
     exception_count = sum(1 for record in records if not record.metric)
     reviewed_count = sum(
@@ -56,58 +67,58 @@ def render_extraction_review_page(*, intake_root: Path | None = None) -> None:
     selected = records[labels.index(selected_label)]
     render_evidence_panel(selected)
 
-    reviewed_by = st.text_input("reviewed_by")
     review_note = st.text_area("review_note")
     corrected_value = st.number_input("corrected_value", value=int(selected.extracted_value or 0), step=1)
     action_cols = st.columns(4)
     if action_cols[0].button("Accept", type="primary"):
         _run_action(
             resolved_root,
-            lambda: accept_review_record(
+            session_factory=session_factory,
+            action=lambda session: accept_review_record(
+                session,
                 intake_root=resolved_root,
                 review_id=selected.review_id,
-                reviewed_by=reviewed_by,
+                identity=identity,
                 review_note=review_note,
-            )
+            ),
         )
     if action_cols[1].button("Correct"):
         _run_action(
             resolved_root,
-            lambda: correct_review_record(
+            session_factory=session_factory,
+            action=lambda session: correct_review_record(
+                session,
                 intake_root=resolved_root,
                 review_id=selected.review_id,
                 corrected_value=int(corrected_value),
-                reviewed_by=reviewed_by,
+                identity=identity,
                 review_note=review_note,
-            )
+            ),
         )
     if action_cols[2].button("Needs review"):
         _run_action(
             resolved_root,
-            lambda: mark_review_needs_review(
+            session_factory=session_factory,
+            action=lambda session: mark_review_needs_review(
+                session,
                 intake_root=resolved_root,
                 review_id=selected.review_id,
-                reviewed_by=reviewed_by,
+                identity=identity,
                 review_note=review_note,
-            )
+            ),
         )
     if action_cols[3].button("Exclude"):
         _run_action(
             resolved_root,
-            lambda: exclude_review_record(
+            session_factory=session_factory,
+            action=lambda session: exclude_review_record(
+                session,
                 intake_root=resolved_root,
                 review_id=selected.review_id,
-                reviewed_by=reviewed_by,
+                identity=identity,
                 review_note=review_note,
-            )
+            ),
         )
-
-    st.download_button(
-        "Download review_report.csv",
-        data=review_report_csv(resolved_root),
-        file_name="review_report.csv",
-        mime="text/csv",
-    )
 
 
 def _review_label(record: object) -> str:
@@ -116,13 +127,40 @@ def _review_label(record: object) -> str:
     return f"{getattr(record, 'school_name')} / {department} / {metric}"
 
 
-def _run_action(intake_root: Path, action: object) -> None:
+def _run_action(
+    intake_root: Path,
+    *,
+    session_factory: sessionmaker[Session],
+    action: Callable[[Session], object],
+) -> None:
+    decision_committed = False
+    outbox_stats: dict[str, int] | None = None
     try:
         with acquire_web_write_lock(intake_root, owner="web_extraction_review"):
-            if callable(action):
-                action()
+            with session_factory() as session:
+                try:
+                    action(session)
+                    session.commit()
+                    decision_committed = True
+                except Exception:
+                    session.rollback()
+                    raise
+                outbox_stats = flush_audit_outbox(
+                    session,
+                    jsonl_path=web_write_lock_path(intake_root).parent / "audit" / "manual-actions.jsonl",
+                )
     except (KeyError, LockBusyError, ReviewValidationError) as exc:
         st.error(str(exc))
+        return
+    except Exception:
+        if decision_committed:
+            st.warning("Review saved, but audit JSONL projection is pending. The database decision is preserved.")
+        else:
+            st.error("Review could not be saved. No decision was recorded.")
+        return
+    assert outbox_stats is not None
+    if outbox_stats["failed"]:
+        st.warning("Review saved, but audit JSONL export failed. The database decision is preserved for retry.")
         return
     st.success("Review saved.")
     st.rerun()

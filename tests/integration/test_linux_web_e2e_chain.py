@@ -22,6 +22,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
+from eidp.db.models import Base
+from eidp.identity import IdentitySource, ResolvedIdentity
 from eidp.pdf.table_grid_extractor import extract_table_grid_records
 from eidp.pipeline.double_check_compare import DoubleCheckStatus, compare_external_to_reviewed
 from eidp.pipeline.external_extraction_import import ExternalExtractionRow, ExternalSourceSystem
@@ -36,6 +41,7 @@ from eidp.pipeline.extraction_review import (
     ensure_review_records,
 )
 from eidp.pipeline.pdf_intake import PdfKind, store_pdf_upload, validate_intake_metadata
+from eidp.pipeline.review_decision import overlay_review_decisions
 from eidp.pipeline.review_master_diff import (
     MasterExpectedRow,
     MatchStatus,
@@ -80,12 +86,23 @@ def _run_chain_to_reviewed(tmp_path: Path) -> list[ReviewedExtractionRow]:
     # No Excel is written anywhere along the extraction path.
     assert list(tmp_path.rglob("*.xlsx")) == []
 
-    for review in ensure_review_records(tmp_path):
-        if review.task_type == ReviewTaskType.EXTRACTED_METRIC:
-            accept_review_record(
-                intake_root=tmp_path, review_id=review.review_id, reviewed_by="op-e2e"
-            )
-    reviewed = reviewed_rows_from_records(ensure_review_records(tmp_path))
+    engine = create_engine(f"sqlite:///{tmp_path / 'review-decisions.sqlite3'}", future=True)
+    Base.metadata.create_all(engine)
+    try:
+        with Session(engine) as session:
+            for review in ensure_review_records(tmp_path):
+                if review.task_type == ReviewTaskType.EXTRACTED_METRIC:
+                    accept_review_record(
+                        session,
+                        intake_root=tmp_path,
+                        review_id=review.review_id,
+                        identity=ResolvedIdentity("op-e2e", IdentitySource.CONFIGURED_FALLBACK),
+                    )
+            session.commit()
+            overlaid = overlay_review_decisions(session, ensure_review_records(tmp_path))
+        reviewed = reviewed_rows_from_records(overlaid)
+    finally:
+        engine.dispose()
     assert len(reviewed) == 84
     assert all(row.school_name == _SCHOOL for row in reviewed)
     return reviewed

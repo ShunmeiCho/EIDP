@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Literal, Self
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 from eidp.fiscal_year import JapaneseEra, configure_japanese_eras, current_fiscal_year
@@ -84,6 +84,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     data_dir: Path = _DEFAULT_APP_ROOT / "data"
     app_root: Path = _DEFAULT_APP_ROOT
+    identity_mode: Literal["trusted_proxy", "configured_fallback"] = "trusted_proxy"
+    fallback_actor: str = "operator"
+    proxy_shared_secret: SecretStr = SecretStr("")
 
     # Operational year currently in scope. Defaults to the Japanese fiscal
     # year for today, while EIDP_TARGET_FISCAL_YEAR remains available for

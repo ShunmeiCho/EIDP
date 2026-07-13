@@ -45,7 +45,7 @@ PDF intake
   - Result: all checks passed.
 - `uv run mypy src/eidp/pipeline/pdf_intake.py src/eidp/pipeline/extraction_queue.py src/eidp/pipeline/extraction_review.py src/eidp/pipeline/review_report.py src/eidp/pipeline/review_master_diff.py src/eidp/web`
   - Result: success, no issues found in 20 source files.
-- `uv run python -c "import eidp.web.app; import eidp.web.pages.review_diff"`
+- `uv run python -c "import eidp.web.app; import eidp.web.views.review_diff"`
   - Result: passed.
 - `uv run --extra dev pytest tests/unit/test_external_extraction_import.py tests/unit/test_double_check_compare.py -q`
   - Result: 11 passed.
@@ -53,7 +53,7 @@ PDF intake
   - Result: all checks passed.
 - `uv run --extra dev mypy src/eidp/pipeline/pdf_intake.py src/eidp/pipeline/extraction_queue.py src/eidp/pipeline/extraction_review.py src/eidp/pipeline/review_report.py src/eidp/pipeline/review_master_diff.py src/eidp/pipeline/external_extraction_import.py src/eidp/pipeline/double_check_compare.py src/eidp/web`
   - Result: success, no issues found in 24 source files.
-- `uv run --extra dev python -c "import eidp.web.app; import eidp.web.pages.double_check"`
+- `uv run --extra dev python -c "import eidp.web.app; import eidp.web.views.double_check"`
   - Result: passed.
 - `git diff --check`
   - Result: passed for Goal 3F-A docs/templates.

@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 from typing import NoReturn
 
@@ -15,8 +13,6 @@ from sqlalchemy.exc import SQLAlchemyError
 def register_tool_commands(app: typer.Typer) -> None:
     app.command()(verify_identity)
     app.command()(db_info)
-    app.command()(review_ui)
-    app.command()(operator_ui)
     app.command()(export_excel)
     app.command()(export_competition_excel)
     app.command()(diff_excel)
@@ -132,50 +128,6 @@ def db_info() -> None:
         _exit_database_not_ready_error(exc, output_json=False, command_label="db-info")
     finally:
         session.close()
-
-
-def review_ui(
-    port: int = typer.Option(8501, help="Port for the Streamlit server"),
-) -> None:
-    """Launch the Streamlit operator/review UI."""
-    app_path = Path(__file__).parent / "review" / "app.py"
-    typer.echo(f"Launching review UI on http://localhost:{port}")
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "streamlit",
-            "run",
-            str(app_path),
-            "--server.address",
-            "127.0.0.1",
-            "--server.port",
-            str(port),
-        ],
-        check=True,
-    )
-
-
-def operator_ui(
-    port: int = typer.Option(8501, help="Port for the Streamlit server"),
-) -> None:
-    """Launch the Streamlit operator console for URL補足, exports, and review."""
-    app_path = Path(__file__).parent / "review" / "app.py"
-    typer.echo(f"Launching operator UI on http://localhost:{port}")
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "streamlit",
-            "run",
-            str(app_path),
-            "--server.address",
-            "127.0.0.1",
-            "--server.port",
-            str(port),
-        ],
-        check=True,
-    )
 
 
 def export_excel(

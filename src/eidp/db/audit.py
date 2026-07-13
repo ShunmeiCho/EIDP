@@ -18,12 +18,25 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from eidp.db.models import ManualActionLog
+from eidp.identity import IdentitySource, ResolvedIdentity
 
 
 def _to_json_or_none(value: Any) -> str | None:
     if value is None:
         return None
     return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+
+
+def _resolve_audit_identity(
+    *,
+    identity: ResolvedIdentity | None,
+    actor: str | None,
+) -> ResolvedIdentity:
+    if identity is not None and actor is not None:
+        raise ValueError("pass identity or actor, not both")
+    if identity is not None:
+        return identity
+    return ResolvedIdentity(actor or "operator", IdentitySource.LEGACY_UNSPECIFIED)
 
 
 def log_manual_action(
@@ -36,7 +49,8 @@ def log_manual_action(
     old_value: Any = None,
     new_value: Any = None,
     reason: str | None = None,
-    actor: str = "operator",
+    identity: ResolvedIdentity | None = None,
+    actor: str | None = None,
 ) -> ManualActionLog:
     """Insert a manual_action_log row (no commit).
 
@@ -57,12 +71,15 @@ def log_manual_action(
         easily distinguish "no prior value" from "prior value was JSON null".
     reason :
         Free-text rationale entered by the operator.
-    actor :
-        Defaults to ``"operator"`` for the single-business-user PC deployment.
+    identity, actor :
+        New callers pass a typed identity. Existing ``actor=`` callers remain
+        compatible and are marked ``legacy_unspecified``.
     """
+    resolved_identity = _resolve_audit_identity(identity=identity, actor=actor)
     row = ManualActionLog(
         action_id=str(uuid.uuid4()),
-        actor=actor,
+        actor=resolved_identity.actor,
+        identity_source=resolved_identity.source.value,
         action_type=action_type,
         target_table=target_table,
         target_id=target_id,

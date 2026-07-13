@@ -30,6 +30,17 @@ def test_linux_launcher_sets_app_root_and_stays_loopback_bound() -> None:
     assert "${STREAMLIT_SERVER_PORT:-" not in launcher
 
 
+def test_linux_launcher_preflights_identity_before_starting_streamlit() -> None:
+    launcher = Path("deploy/linux/run_web.sh").read_text(encoding="utf-8")
+
+    preflight = (
+        'from eidp.config import settings; from eidp.web.identity import validate_identity_configuration; '
+        'validate_identity_configuration(settings)'
+    )
+    assert preflight in launcher
+    assert launcher.index(preflight) < launcher.index("exec uv run --frozen --no-sync streamlit run")
+
+
 def test_eidpctl_is_exact_thin_boundary_and_delegation() -> None:
     controller = Path("deploy/linux/eidpctl.sh")
 
@@ -122,7 +133,7 @@ def test_reverse_proxy_doc_marks_runtime_url_settings_available_but_ict_pending(
     ingress = design.split("## 3. Access Architecture", maxsplit=1)[1].split("## 4. Identity And Audit", maxsplit=1)[0]
     normalized_ingress = " ".join(ingress.split())
 
-    assert "ICT CONFIGURATION AND APP IDENTITY SUPPORT PENDING" in requirements
+    assert "APP IDENTITY SUPPORT AVAILABLE — ICT CONFIGURATION AND ACCEPTANCE EVIDENCE PENDING" in requirements
     assert "EIDP remains `NOT_READY`" in requirements
     assert (
         "Application support for the base path, public browser address and explicit CORS origins is **AVAILABLE**"
@@ -138,6 +149,30 @@ def test_reverse_proxy_doc_marks_runtime_url_settings_available_but_ict_pending(
         "ICT proxy configuration and deployment evidence remain **PENDING** and release blocking" in normalized_ingress
     )
     assert "Launcher support for `baseUrlPath`" not in normalized_ingress
+
+
+def test_identity_deployment_template_and_runbooks_match_the_fail_closed_runtime() -> None:
+    environment = Path("deploy/linux/env.example").read_text(encoding="utf-8")
+    proxy_requirements = Path("deploy/linux/reverse-proxy-requirements.md").read_text(encoding="utf-8")
+    normalized_proxy_requirements = " ".join(proxy_requirements.split())
+    venus_runbook = Path("docs/runbooks/venus-init-and-acceptance.md").read_text(encoding="utf-8")
+    dev_runbook = Path("docs/runbooks/linux-web-dev-run.md").read_text(encoding="utf-8")
+
+    assert "EIDP_IDENTITY_MODE=trusted_proxy" in environment
+    assert "EIDP_FALLBACK_ACTOR=operator" in environment
+    assert "EIDP_PROXY_SHARED_SECRET=" in environment
+    assert "EIDP_AUTH_MODE" not in environment
+    assert (
+        "Application support for trusted proxy identity and configured fallback is **AVAILABLE**"
+        in proxy_requirements
+    )
+    assert (
+        "ICT configuration and acceptance evidence remain **PENDING and release blocking**"
+        in normalized_proxy_requirements
+    )
+    assert "`run_web.sh` validates identity configuration before starting Streamlit" in venus_runbook
+    assert "EIDP_IDENTITY_MODE=configured_fallback" in dev_runbook
+    assert "EIDP_FALLBACK_ACTOR=local-dev" in dev_runbook
 
 
 def test_venus_environment_template_uses_authorized_project_root() -> None:
@@ -160,4 +195,7 @@ def test_ci_has_no_windows_packaging_or_stage6_gate() -> None:
     assert all(token not in workflow for token in forbidden)
     assert "tests/integration/test_linux_web_e2e_chain.py" in workflow
     assert "Streamlit loopback health smoke" in workflow
-    assert "STREAMLIT_SERVER_PORT=8502 deploy/linux/run_web.sh" in workflow
+    assert (
+        "EIDP_IDENTITY_MODE=configured_fallback EIDP_FALLBACK_ACTOR=ci-smoke "
+        "STREAMLIT_SERVER_PORT=8502 deploy/linux/run_web.sh"
+    ) in workflow

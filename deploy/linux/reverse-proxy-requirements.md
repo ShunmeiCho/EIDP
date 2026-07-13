@@ -1,6 +1,6 @@
 # ICT Reverse-Proxy Requirements — EIDP Linux/Web v1
 
-Status: **APPROVED DESIGN — ICT CONFIGURATION AND APP IDENTITY SUPPORT PENDING**
+Status: **APP IDENTITY SUPPORT AVAILABLE — ICT CONFIGURATION AND ACCEPTANCE EVIDENCE PENDING**
 
 Audience: the ICT/server administrator who owns the institutional ingress.
 EIDP remains `NOT_READY` until the proxy and business-PC path have fresh
@@ -115,10 +115,13 @@ liveness signal only and returns no identity or secret data.
 
 ### 7. Trusted identity is fail-closed
 
-Application support for trusted proxy identity is **PENDING and release
-blocking**. The current repository still declares authentication unimplemented.
+Application support for trusted proxy identity and configured fallback is **AVAILABLE**.
+The launcher validates the selected mode before Streamlit starts, trusted mode
+requires a non-empty proxy secret, and every served application request resolves
+one typed identity. ICT configuration and acceptance evidence remain **PENDING
+and release blocking**.
 
-When trusted mode is implemented and enabled:
+When trusted mode is enabled:
 
 1. ICT authenticates the request and derives a stable user ID.
 2. ICT overwrites any client-supplied identity header with the verified value.
@@ -133,8 +136,8 @@ Agreed header names are `X-Auth-User` and `X-EIDP-Proxy-Secret`. Neither the
 secret nor its hash may enter git, logs, screenshots, HAR files, audit content or
 the deployment manifest.
 
-If ICT cannot supply a stable user ID, **PENDING application support** allows an
-explicit `configured_fallback` mode for the v1 pilot. In that mode the app
+If ICT cannot supply a stable user ID, **AVAILABLE application support** allows
+an explicit `configured_fallback` mode for the v1 pilot. In that mode the app
 ignores all identity headers and records the configured operator plus
 `identity_source=configured_fallback`; this limitation must appear in PI
 acceptance evidence. It also explicitly trusts every Venus local account capable

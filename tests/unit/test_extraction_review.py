@@ -5,7 +5,11 @@ import io
 from pathlib import Path
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
+from eidp.db.models import Base
+from eidp.identity import IdentitySource, ResolvedIdentity
 from eidp.pdf.table_grid_extractor import CellEvidence, TableDepartmentRecord
 from eidp.pipeline.extraction_queue import process_intake_record
 from eidp.pipeline.extraction_review import (
@@ -23,6 +27,16 @@ from eidp.pipeline.extraction_review import (
 from eidp.pipeline.pdf_intake import PdfKind, store_pdf_upload, validate_intake_metadata
 
 PDF_BYTES = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n"
+TEST_IDENTITY = ResolvedIdentity("operator-a", IdentitySource.CONFIGURED_FALLBACK)
+
+
+@pytest.fixture()
+def db_session(tmp_path: Path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'review-decisions.sqlite3'}", future=True)
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session
+    engine.dispose()
 
 
 def _metadata(*, school_name: str = "東京テスト専門学校"):
@@ -99,32 +113,36 @@ def _capacity_review_id(tmp_path: Path) -> str:
     return next(record.review_id for record in records if record.metric == "capacity")
 
 
-def test_review_status_can_be_set_to_all_operator_states(tmp_path: Path) -> None:
+def test_review_status_can_be_set_to_all_operator_states(tmp_path: Path, db_session: Session) -> None:
     review_id = _capacity_review_id(tmp_path)
 
     accepted = accept_review_record(
+        db_session,
         intake_root=tmp_path,
         review_id=review_id,
-        reviewed_by="operator-a",
+        identity=TEST_IDENTITY,
         review_note="source checked",
     )
     corrected = correct_review_record(
+        db_session,
         intake_root=tmp_path,
         review_id=review_id,
         corrected_value=41,
-        reviewed_by="operator-a",
+        identity=TEST_IDENTITY,
         review_note="official table uses revised count",
     )
     needs_review = mark_review_needs_review(
+        db_session,
         intake_root=tmp_path,
         review_id=review_id,
-        reviewed_by="operator-a",
+        identity=TEST_IDENTITY,
         review_note="ask second reviewer",
     )
     excluded = exclude_review_record(
+        db_session,
         intake_root=tmp_path,
         review_id=review_id,
-        reviewed_by="operator-a",
+        identity=TEST_IDENTITY,
         review_note="not current export scope",
     )
 
@@ -136,31 +154,32 @@ def test_review_status_can_be_set_to_all_operator_states(tmp_path: Path) -> None
     assert excluded.reviewed_at is not None
 
 
-def test_corrected_value_preserves_original_extracted_value(tmp_path: Path) -> None:
+def test_corrected_value_preserves_original_extracted_value_and_json_bytes(
+    tmp_path: Path,
+    db_session: Session,
+) -> None:
     review_id = _capacity_review_id(tmp_path)
+    base_path = tmp_path / "extraction" / "reviews" / f"{review_id}.json"
+    base_bytes = base_path.read_bytes()
 
     corrected = correct_review_record(
+        db_session,
         intake_root=tmp_path,
         review_id=review_id,
         corrected_value=42,
-        reviewed_by="operator-a",
+        identity=TEST_IDENTITY,
     )
 
     assert corrected.extracted_value == 40
     assert corrected.corrected_value == 42
     assert corrected.review_status == ReviewStatus.CORRECTED
     assert is_final_ready(corrected)
+    assert base_path.read_bytes() == base_bytes
+    assert ensure_review_records(tmp_path)[0].review_status == ReviewStatus.UNREVIEWED
 
 
-def test_review_report_includes_evidence_columns(tmp_path: Path) -> None:
-    review_id = _capacity_review_id(tmp_path)
-    correct_review_record(
-        intake_root=tmp_path,
-        review_id=review_id,
-        corrected_value=42,
-        reviewed_by="operator-a",
-        review_note="manual correction",
-    )
+def test_review_report_includes_immutable_base_evidence_columns(tmp_path: Path) -> None:
+    _capacity_review_id(tmp_path)
 
     report = review_report_csv(tmp_path)
     rows = list(csv.DictReader(io.StringIO(report)))
@@ -171,8 +190,8 @@ def test_review_report_includes_evidence_columns(tmp_path: Path) -> None:
     assert capacity["field_category"] == "文化教養"
     assert capacity["course_name"] == "専門課程"
     assert capacity["extracted_value"] == "40"
-    assert capacity["corrected_value"] == "42"
-    assert capacity["review_status"] == "corrected"
+    assert capacity["corrected_value"] == ""
+    assert capacity["review_status"] == "unreviewed"
     assert capacity["source_pdf"]
     assert capacity["page_no"] == "0"
     assert capacity["table_index"] == "1"
@@ -181,22 +200,26 @@ def test_review_report_includes_evidence_columns(tmp_path: Path) -> None:
     assert capacity["raw_label"] == "収容定員"
     assert capacity["raw_value"] == "40"
     assert capacity["canonical_metric"] == "capacity"
-    assert capacity["review_note"] == "manual correction"
-    assert capacity["reviewed_by"] == "operator-a"
-    assert capacity["final_ready"] == "True"
+    assert capacity["review_note"] == ""
+    assert capacity["reviewed_by"] == ""
+    assert capacity["final_ready"] == "False"
     assert list(tmp_path.rglob("*.xlsx")) == []
 
 
-def test_exception_manual_ocr_cannot_be_accepted_as_extracted_data(tmp_path: Path) -> None:
+def test_exception_manual_ocr_cannot_be_accepted_as_extracted_data(
+    tmp_path: Path,
+    db_session: Session,
+) -> None:
     _image_intake(tmp_path)
     records = ensure_review_records(tmp_path)
     exception = next(record for record in records if record.task_type == ReviewTaskType.EXCEPTION_MANUAL_OCR)
 
     with pytest.raises(ReviewValidationError):
         accept_review_record(
+            db_session,
             intake_root=tmp_path,
             review_id=exception.review_id,
-            reviewed_by="operator-a",
+            identity=TEST_IDENTITY,
         )
 
     loaded = ensure_review_records(tmp_path)
