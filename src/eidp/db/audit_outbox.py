@@ -112,9 +112,6 @@ def flush_audit_outbox(
     ``failed`` counts. The session is committed at the end.
     """
     target_path = jsonl_path or DEFAULT_OUTBOX_PATH
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-
-    existing_ids = _read_existing_action_ids(target_path)
     pending = session.execute(
         select(ManualActionLog).where(ManualActionLog.jsonl_exported_at.is_(None))
     ).scalars().all()
@@ -122,28 +119,45 @@ def flush_audit_outbox(
     stats = {"exported": 0, "already_present": 0, "failed": 0}
     now = datetime.now(UTC)
 
-    with target_path.open("a", encoding="utf-8") as fh:
+    try:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        existing_ids = _read_existing_action_ids(target_path)
+        with target_path.open("a", encoding="utf-8") as fh:
+            for row in pending:
+                try:
+                    if row.action_id in existing_ids:
+                        stats["already_present"] += 1
+                    else:
+                        fh.write(json.dumps(_row_to_dict(row), ensure_ascii=False) + "\n")
+                        fh.flush()
+                        os.fsync(fh.fileno())
+                        existing_ids.add(row.action_id)
+                        stats["exported"] += 1
+                    row.jsonl_exported_at = now
+                    row.jsonl_export_error = None
+                except Exception as exc:  # pragma: no cover — disk full / permission
+                    _record_export_failure(row, exc=exc, target_path=target_path)
+                    stats["failed"] += 1
+    except Exception as exc:  # target mkdir / archive scan / initial open failure
         for row in pending:
-            try:
-                if row.action_id in existing_ids:
-                    stats["already_present"] += 1
-                else:
-                    fh.write(json.dumps(_row_to_dict(row), ensure_ascii=False) + "\n")
-                    fh.flush()
-                    os.fsync(fh.fileno())
-                    existing_ids.add(row.action_id)
-                    stats["exported"] += 1
-                row.jsonl_exported_at = now
-                row.jsonl_export_error = None
-            except Exception as exc:  # pragma: no cover — disk full / permission
-                log.exception(
-                    "audit_outbox_export_failed",
-                    action_id=row.action_id,
-                    jsonl_path=str(target_path),
-                    error_type=type(exc).__name__,
-                )
-                row.jsonl_export_error = str(exc)[:500]
+            if row.jsonl_exported_at is None:
+                _record_export_failure(row, exc=exc, target_path=target_path)
                 stats["failed"] += 1
 
     session.commit()
     return stats
+
+
+def _record_export_failure(
+    row: ManualActionLog,
+    *,
+    exc: Exception,
+    target_path: Path,
+) -> None:
+    log.exception(
+        "audit_outbox_export_failed",
+        action_id=row.action_id,
+        jsonl_path=str(target_path),
+        error_type=type(exc).__name__,
+    )
+    row.jsonl_export_error = str(exc)[:500]

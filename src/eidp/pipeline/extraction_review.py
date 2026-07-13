@@ -11,12 +11,15 @@ import csv
 import hashlib
 import io
 import json
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from uuid import uuid4
 
+from sqlalchemy.orm import Session
+
+from eidp.identity import ResolvedIdentity
 from eidp.pipeline.extraction_queue import (
     ExtractedMetricRow,
     ExtractionQueueItem,
@@ -149,82 +152,94 @@ def load_review_records(intake_root: Path) -> list[ExtractionReviewRecord]:
 
 
 def accept_review_record(
+    session: Session,
     *,
     intake_root: Path,
     review_id: str,
-    reviewed_by: str,
+    identity: ResolvedIdentity,
     review_note: str | None = None,
 ) -> ExtractionReviewRecord:
+    from eidp.pipeline.review_decision import ReviewDecision, apply_review_decision, overlay_review_decisions
+
     record = _load_one_review_record(intake_root, review_id)
     _require_extracted_metric(record)
-    updated = _review_update(
-        record,
-        status=ReviewStatus.ACCEPTED,
+    apply_review_decision(
+        session,
+        record=record,
+        decision=ReviewDecision.ACCEPT,
         corrected_value=None,
-        reviewed_by=reviewed_by,
-        review_note=review_note,
+        note=review_note,
+        identity=identity,
     )
-    _write_review_record(Path(intake_root), updated)
-    return updated
+    return overlay_review_decisions(session, [record])[0]
 
 
 def correct_review_record(
+    session: Session,
     *,
     intake_root: Path,
     review_id: str,
     corrected_value: int,
-    reviewed_by: str,
+    identity: ResolvedIdentity,
     review_note: str | None = None,
 ) -> ExtractionReviewRecord:
+    from eidp.pipeline.review_decision import ReviewDecision, apply_review_decision, overlay_review_decisions
+
     record = _load_one_review_record(intake_root, review_id)
     _require_extracted_metric(record)
-    updated = _review_update(
-        record,
-        status=ReviewStatus.CORRECTED,
+    apply_review_decision(
+        session,
+        record=record,
+        decision=ReviewDecision.CORRECT,
         corrected_value=corrected_value,
-        reviewed_by=reviewed_by,
-        review_note=review_note,
+        note=review_note,
+        identity=identity,
     )
-    _write_review_record(Path(intake_root), updated)
-    return updated
+    return overlay_review_decisions(session, [record])[0]
 
 
 def mark_review_needs_review(
+    session: Session,
     *,
     intake_root: Path,
     review_id: str,
-    reviewed_by: str,
+    identity: ResolvedIdentity,
     review_note: str | None = None,
 ) -> ExtractionReviewRecord:
+    from eidp.pipeline.review_decision import ReviewDecision, apply_review_decision, overlay_review_decisions
+
     record = _load_one_review_record(intake_root, review_id)
-    updated = _review_update(
-        record,
-        status=ReviewStatus.NEEDS_REVIEW,
-        corrected_value=record.corrected_value,
-        reviewed_by=reviewed_by,
-        review_note=review_note,
+    apply_review_decision(
+        session,
+        record=record,
+        decision=ReviewDecision.NEEDS_REVIEW,
+        corrected_value=None,
+        note=review_note,
+        identity=identity,
     )
-    _write_review_record(Path(intake_root), updated)
-    return updated
+    return overlay_review_decisions(session, [record])[0]
 
 
 def exclude_review_record(
+    session: Session,
     *,
     intake_root: Path,
     review_id: str,
-    reviewed_by: str,
+    identity: ResolvedIdentity,
     review_note: str | None = None,
 ) -> ExtractionReviewRecord:
+    from eidp.pipeline.review_decision import ReviewDecision, apply_review_decision, overlay_review_decisions
+
     record = _load_one_review_record(intake_root, review_id)
-    updated = _review_update(
-        record,
-        status=ReviewStatus.EXCLUDED,
-        corrected_value=record.corrected_value,
-        reviewed_by=reviewed_by,
-        review_note=review_note,
+    apply_review_decision(
+        session,
+        record=record,
+        decision=ReviewDecision.EXCLUDE,
+        corrected_value=None,
+        note=review_note,
+        identity=identity,
     )
-    _write_review_record(Path(intake_root), updated)
-    return updated
+    return overlay_review_decisions(session, [record])[0]
 
 
 def is_final_ready(record: ExtractionReviewRecord, *, min_confidence: float = 0.85) -> bool:
@@ -334,29 +349,6 @@ def _review_id_for_extracted_row(row: ExtractedMetricRow) -> str:
     }
     digest = hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     return f"metric-{digest[:24]}"
-
-
-def _review_update(
-    record: ExtractionReviewRecord,
-    *,
-    status: ReviewStatus,
-    corrected_value: int | None,
-    reviewed_by: str,
-    review_note: str | None,
-) -> ExtractionReviewRecord:
-    actor = reviewed_by.strip()
-    if not actor:
-        raise ReviewValidationError("reviewed_by is required")
-    now = _utc_now_iso()
-    return replace(
-        record,
-        review_status=status,
-        corrected_value=corrected_value,
-        review_note=_clean_optional_text(review_note),
-        reviewed_by=actor,
-        reviewed_at=now,
-        updated_at_utc=now,
-    )
 
 
 def _require_extracted_metric(record: ExtractionReviewRecord) -> None:
@@ -482,11 +474,6 @@ def _review_record_from_mapping(payload: dict[str, object]) -> ExtractionReviewR
         created_at_utc=_required_str(payload, "created_at_utc"),
         updated_at_utc=_required_str(payload, "updated_at_utc"),
     )
-
-
-def _clean_optional_text(value: str | None) -> str | None:
-    text = (value or "").strip()
-    return text or None
 
 
 def _utc_now_iso() -> str:

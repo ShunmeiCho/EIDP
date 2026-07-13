@@ -4,6 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -417,4 +418,44 @@ class ManualActionLog(Base):
             "target_table",
             "document_id",
         ),
+    )
+
+
+class ExtractionReviewDecision(Base):
+    """Append-only authoritative decision for one immutable extraction review record."""
+
+    __tablename__ = "extraction_review_decision"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    decision_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
+    review_id: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    decision: Mapped[str] = mapped_column(String(24), nullable=False)
+    corrected_value: Mapped[int | None] = mapped_column(Integer)
+    note: Mapped[str | None] = mapped_column(Text)
+    actor: Mapped[str] = mapped_column(String(50), nullable=False)
+    identity_source: Mapped[str] = mapped_column(String(32), nullable=False)
+    audit_action_id: Mapped[str] = mapped_column(
+        ForeignKey("manual_action_log.action_id"),
+        unique=True,
+        nullable=False,
+    )
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "review_id",
+            "revision",
+            name="uq_extraction_review_decision_review_revision",
+        ),
+        CheckConstraint(
+            "decision != 'exclude' OR "
+            "length(trim(coalesce(note, ''))) BETWEEN 1 AND 500",
+            name="ck_extraction_review_decision_exclude_reason",
+        ),
+        {"comment": "Append-only audited extraction review decisions"},
     )

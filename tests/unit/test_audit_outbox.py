@@ -20,6 +20,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from eidp.db import audit_outbox as audit_outbox_module
 from eidp.db.audit import log_manual_action
 from eidp.db.audit_outbox import flush_audit_outbox
 from eidp.db.models import ManualActionLog
@@ -542,3 +543,71 @@ def test_flush_outbox_creates_parent_directory(engine, tmp_path):
         flush_audit_outbox(session, jsonl_path=jsonl)
 
     assert jsonl.exists()
+
+
+def test_flush_outbox_records_error_when_parent_directory_creation_fails(
+    engine,
+    tmp_path,
+    monkeypatch,
+):
+    jsonl = tmp_path / "unwritable" / "manual-actions.jsonl"
+    original_mkdir = Path.mkdir
+
+    def fail_target_mkdir(self, *args, **kwargs):  # noqa: ANN001, ANN202
+        if self == jsonl.parent:
+            raise PermissionError("outbox mkdir denied")
+        return original_mkdir(self, *args, **kwargs)
+
+    with Session(engine) as session:
+        log_manual_action(session, action_type="manual_entry", target_table="department_yearly")
+        session.commit()
+        monkeypatch.setattr(Path, "mkdir", fail_target_mkdir)
+
+        stats = flush_audit_outbox(session, jsonl_path=jsonl)
+
+        row = session.query(ManualActionLog).one()
+        assert stats == {"exported": 0, "already_present": 0, "failed": 1}
+        assert row.jsonl_exported_at is None
+        assert row.jsonl_export_error == "outbox mkdir denied"
+
+
+def test_flush_outbox_records_error_when_existing_id_scan_fails(engine, tmp_path, monkeypatch):
+    jsonl = tmp_path / "manual-actions.jsonl"
+
+    def fail_scan(_jsonl_path):  # noqa: ANN001, ANN202
+        raise OSError("outbox scan denied")
+
+    with Session(engine) as session:
+        log_manual_action(session, action_type="manual_entry", target_table="department_yearly")
+        session.commit()
+        monkeypatch.setattr(audit_outbox_module, "_read_existing_action_ids", fail_scan)
+
+        stats = flush_audit_outbox(session, jsonl_path=jsonl)
+
+        row = session.query(ManualActionLog).one()
+        assert stats == {"exported": 0, "already_present": 0, "failed": 1}
+        assert row.jsonl_exported_at is None
+        assert row.jsonl_export_error == "outbox scan denied"
+
+
+def test_flush_outbox_records_error_when_target_open_fails(engine, tmp_path, monkeypatch):
+    jsonl = tmp_path / "manual-actions.jsonl"
+    original_open = Path.open
+
+    def fail_target_open(self, *args, **kwargs):  # noqa: ANN001, ANN202
+        mode = args[0] if args else kwargs.get("mode", "r")
+        if self == jsonl and "a" in mode:
+            raise PermissionError("outbox open denied")
+        return original_open(self, *args, **kwargs)
+
+    with Session(engine) as session:
+        log_manual_action(session, action_type="manual_entry", target_table="department_yearly")
+        session.commit()
+        monkeypatch.setattr(Path, "open", fail_target_open)
+
+        stats = flush_audit_outbox(session, jsonl_path=jsonl)
+
+        row = session.query(ManualActionLog).one()
+        assert stats == {"exported": 0, "already_present": 0, "failed": 1}
+        assert row.jsonl_exported_at is None
+        assert row.jsonl_export_error == "outbox open denied"
