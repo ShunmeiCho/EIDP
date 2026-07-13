@@ -36,7 +36,7 @@ def test_web_write_lock_rejects_concurrent_writer(tmp_path: Path) -> None:
             Path("src/eidp/web/pages/pdf_intake.py"),
             {"store_pdf_upload", "store_zip_upload", "register_url_csv", "ensure_extraction_queue"},
         ),
-        (Path("src/eidp/web/pages/extraction_queue.py"), {"ensure_extraction_queue"}),
+        (Path("src/eidp/web/pages/extraction_queue.py"), {"ensure_extraction_queue", "run_extraction"}),
         (Path("src/eidp/web/pages/extraction_review.py"), {"ensure_review_records"}),
     ],
 )
