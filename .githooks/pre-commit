@@ -1,22 +1,22 @@
 #!/bin/sh
-# Pre-commit hook: scan staged changes for secrets
+# Pre-commit hook: secret scan, large-file guard, Ruff on staged Python files
 # Install: git config core.hooksPath .githooks
+# A missing tool skips only its own step.
 
 if ! command -v gitleaks >/dev/null 2>&1; then
     echo "[pre-commit] gitleaks not found. Install: brew install gitleaks"
     echo "[pre-commit] Skipping secret scan. Run 'brew install gitleaks' to enable."
-    exit 0
-fi
+else
+    echo "[pre-commit] Scanning staged changes for secrets..."
+    gitleaks protect --staged --redact --config .gitleaks.toml
+    STATUS=$?
 
-echo "[pre-commit] Scanning staged changes for secrets..."
-gitleaks protect --staged --redact --config .gitleaks.toml
-STATUS=$?
-
-if [ $STATUS -ne 0 ]; then
-    echo ""
-    echo "[pre-commit] BLOCKED: potential secret detected in staged changes."
-    echo "[pre-commit] Fix the issue and try again, or use 'git commit --no-verify' if false positive."
-    exit 1
+    if [ $STATUS -ne 0 ]; then
+        echo ""
+        echo "[pre-commit] BLOCKED: potential secret detected in staged changes."
+        echo "[pre-commit] Fix the issue and try again, or use 'git commit --no-verify' if false positive."
+        exit 1
+    fi
 fi
 
 # Block obviously large binary files
@@ -39,8 +39,12 @@ for f in $STAGED; do
 done
 
 # Fast half of the CI quality gates: Ruff on staged Python files. Mypy and pytest stay in CI.
+# Ruff reads the working-tree copy of each staged file, so a partial stage is judged on the
+# working tree. --frozen keeps uv.lock untouched; --extra dev is where ruff lives.
 if [ -n "$(git diff --cached --name-only --diff-filter=ACMR -- '*.py')" ]; then
-    if ! git diff --cached --name-only --diff-filter=ACMR -z -- '*.py' | xargs -0 uv run ruff check --force-exclude --; then
+    if ! command -v uv >/dev/null 2>&1; then
+        echo "[pre-commit] uv not found. Skipping Ruff; CI still runs it."
+    elif ! git diff --cached --name-only --diff-filter=ACMR -z -- '*.py' | xargs -0 uv run --frozen --extra dev ruff check --force-exclude --; then
         echo "[pre-commit] BLOCKED: ruff check failed on staged Python files."
         exit 1
     fi
