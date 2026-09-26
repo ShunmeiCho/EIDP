@@ -112,3 +112,10 @@ PRs include `Goals: G<x>, G<y>`.
 - `docs/reports/current-release-status.md`
 - `docs/runbooks/linux-web-dev-run.md`
 - `deploy/linux/server-requirements.md`
+
+## Coding standards
+
+`CODING_STANDARDS.md` holds the judgement rules, each backed by bugs this repo
+already had (commit hashes inline). Read it while writing code, not only while
+reviewing. A rule a program can decide becomes a check (Ruff, a pytest guard,
+`.githooks/pre-commit`) instead of an entry there.

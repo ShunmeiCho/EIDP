@@ -18,6 +18,8 @@ EIDP is a Python 3.12 data pipeline packaged from `src/eidp`. Major modules are 
 
 Use 4-space indentation, explicit type hints, and focused modules. Ruff uses a 120-character line length and lint families `E`, `F`, `I`, `N`, `W`, and `UP`; keep imports sorted by Ruff. Mypy is strict, so avoid untyped public functions. Use `snake_case` for modules, functions, variables, and Typer callbacks; use `PascalCase` for classes and Pydantic/SQLAlchemy models.
 
+`CODING_STANDARDS.md` holds the judgement rules, each backed by bugs this repo already had. Read it while writing code, not only while reviewing.
+
 ## Testing Guidelines
 
 Tests use pytest. Name files `test_*.py`, functions `test_*`, and related classes `Test*`. Prefer deterministic fixtures in `tests/fixtures/` or the existing gold-set/sample-PDF data. For behavior changes, add or update tests first and aim for at least 80% coverage on touched code. Use `uv run pytest --cov=eidp` to check coverage.
@@ -48,4 +50,4 @@ Run independent agents in a single message (multiple `Task` tool uses in paralle
 
 ## Security & Configuration Tips
 
-Copy `.env.example` to `.env` for local configuration; never commit real secrets. Install hooks with `git config core.hooksPath .githooks` to enable staged Gitleaks scans. Keep large/generated artifacts in ignored paths such as `data/pdfs/`, `output/`, or local-only storage. **Red line** (G8): `EIDP_TARGET_FISCAL_YEAR` is never written to `.env` from the settings UI — it rolls over by calendar via `current_fiscal_year()` and is only overridable per-process via env. Streamlit must bind `127.0.0.1` only (G13).
+Copy `.env.example` to `.env` for local configuration; never commit real secrets. Install hooks with `git config core.hooksPath .githooks` to enable staged Gitleaks scans and Ruff on staged Python files (Mypy and pytest stay in CI). Keep large/generated artifacts in ignored paths such as `data/pdfs/`, `output/`, or local-only storage. **Red line** (G8): `EIDP_TARGET_FISCAL_YEAR` is never written to `.env` from the settings UI — it rolls over by calendar via `current_fiscal_year()` and is only overridable per-process via env. Streamlit must bind `127.0.0.1` only (G13).
