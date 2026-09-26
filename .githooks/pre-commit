@@ -38,4 +38,12 @@ for f in $STAGED; do
     fi
 done
 
+# Fast half of the CI quality gates: Ruff on staged Python files. Mypy and pytest stay in CI.
+if [ -n "$(git diff --cached --name-only --diff-filter=ACMR -- '*.py')" ]; then
+    if ! git diff --cached --name-only --diff-filter=ACMR -z -- '*.py' | xargs -0 uv run ruff check --force-exclude --; then
+        echo "[pre-commit] BLOCKED: ruff check failed on staged Python files."
+        exit 1
+    fi
+fi
+
 exit 0
