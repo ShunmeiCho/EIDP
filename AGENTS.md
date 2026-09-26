@@ -18,6 +18,8 @@ EIDP is a Python 3.12 data pipeline packaged from `src/eidp`. Major modules are 
 
 Use 4-space indentation, explicit type hints, and focused modules. Ruff uses a 120-character line length and lint families `E`, `F`, `I`, `N`, `W`, and `UP`; keep imports sorted by Ruff. Mypy is strict, so avoid untyped public functions. Use `snake_case` for modules, functions, variables, and Typer callbacks; use `PascalCase` for classes and Pydantic/SQLAlchemy models.
 
+`CODING_STANDARDS.md` holds the judgement rules, each backed by bugs this repo already had. Read it while writing code, not only while reviewing.
+
 ## Testing Guidelines
 
 Tests use pytest. Name files `test_*.py`, functions `test_*`, and related classes `Test*`. Prefer deterministic fixtures in `tests/fixtures/` or the existing gold-set/sample-PDF data. For behavior changes, add or update tests first and aim for at least 80% coverage on touched code. Use `uv run pytest --cov=eidp` to check coverage.
